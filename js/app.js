@@ -354,7 +354,7 @@
   views.acc = (p=[]) => {
     const selected=p[0], cats=AS.categories, list=AS.accounts.filter(a=>!selected||a.category_id===selected), current=cats.find(c=>c.id===selected);
     return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Kho acc</div><h1>${current?esc(current.name):'Tất cả acc'}</h1><p>Chọn danh mục để xem acc đang bán. Giá từng acc tự động lấy từ giá của danh mục.</p></div>
-    <div class="tabs"><a class="tab ${!selected?'on':''}" href="#/acc">Tất cả danh mục</a>${cats.map(c=>`<a class="tab ${c.id===selected?'on':''}" href="#/acc/${esc(c.id)}">${c.is_blindbag?'🎒':'🎮'} ${esc(c.name)} · ${vnd(c.price)}</a>`).join('')}</div>
+    <div class="tabs"><a class="tab ${!selected?'on':''}" href="#/acc">Tất cả danh mục</a>${cats.map(c=>`<a class="tab ${c.id===selected?'on':''}" href="#/acc/${esc(c.id)}">${c.is_blindbag?'🎒':'🎮'} ${esc(c.name)}${String(c.name||'').trim().toLocaleLowerCase('vi-VN')==='acc tự chọn'?'':` · ${vnd(c.price)}`}</a>`).join('')}</div>
     ${list.length?`<div class="search"><span>🔍</span><input type="search" id="q" placeholder="Tìm theo tên, thông số hoặc mã acc…" autocomplete="off"></div><div class="grid g3" id="list">${list.map(accCard).join('')}</div><div class="empty" id="none" hidden>Không tìm thấy acc phù hợp.</div>`:`<div class="empty"><div class="big">🎮</div><h2>Chưa có acc đang bán</h2><p>Admin sẽ cập nhật thêm acc sau.</p><p style="margin-top:16px"><a class="btn btn-p" href="${esc(S.contact.zalo)}" target="_blank" rel="noopener">💬 Nhắn Zalo admin</a></p></div>`}`;
   };
   views.acc.after = () => bindSearch();
