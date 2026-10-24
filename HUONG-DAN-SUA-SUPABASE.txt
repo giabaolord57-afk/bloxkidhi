@@ -1,0 +1,16 @@
+BDShopVN — SỬA LỖI ĐẶT HÀNG VÀ PHÂN LOẠI ACC
+
+1) Trong Supabase > SQL Editor, chạy file SUPABASE-DONG-BO-SAN-PHAM-VA-DANH-MUC.sql.
+   File này đồng bộ các product_key với js/data.js (tránh lỗi “Sản phẩm không tồn tại”) và đánh dấu Túi mù đúng loại.
+2) Upload toàn bộ file website trong ZIP lên repository bloxfruitshop, ghi đè file cũ.
+3) Đợi GitHub Pages cập nhật, rồi Ctrl+F5.
+4) Trong Admin, tải lại trang; chọn chính xác danh mục trong dropdown Upload acc. Danh mục Túi mù phải hiện biểu tượng 🎒 và giá 50.000đ.
+5) Kiểm tra Admin > danh sách kho: cột Danh mục là nguồn xác nhận acc thuộc danh mục nào. Trang #/tui-mu chỉ hiện acc thuộc danh mục được đánh dấu Túi mù.
+
+Lưu ý: SQL đồng bộ shop_catalog dùng giá bán hiện tại của js/data.js (base + markup 20.000đ). Nếu bạn đã chỉnh giá khác trong Supabase, file này sẽ cập nhật về giá theo mã nguồn. Không xóa orders hay acc inventory.
+
+
+GHI CHU CAP NHAT THANH GIA VA MAT KHAU
+- Thanh gia da duoc sua thanh vong lap lien tuc: hai nhom san pham giong nhau va animation dich chinh xac 50%.
+- O nhap mat khau van giu cho don Cay thue. Cac don mua Trai Ac Quy Vinh Vien, Trai Ac Quy Ruong va Gamepass chi can Roblox username; khong nen yeu cau khach cung cap mat khau cho cac don nay.
+- Ban sua thanh gia khong thay doi schema Supabase, nen khong can chay them SQL chi de sua thanh chay.

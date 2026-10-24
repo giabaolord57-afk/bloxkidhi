@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard | BDShopVN</title>
+  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="stylesheet" href="css/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      padding: 30px 20px;
+      background-color: var(--bg);
+    }
+    .admin {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .admin-header h1 {
+      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(90deg, var(--ac), #fff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .admin-header .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--bd);
+      color: var(--tx2);
+      font-size: 0.9rem;
+    }
+    .admin-header .back-link:hover {
+      color: var(--ac);
+      border-color: var(--ac);
+      box-shadow: 0 0 15px var(--glow-soft);
+    }
+    .card {
+      padding: 26px;
+      margin: 22px 0;
+      border-radius: var(--rl);
+      background: linear-gradient(145deg, rgba(16, 23, 38, 0.85), rgba(11, 15, 26, 0.95));
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .card h2 {
+      font-size: 1.35rem;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .card p {
+      color: var(--tx2);
+      margin-bottom: 16px;
+      font-size: 0.92rem;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    input, button, select, textarea {
+      padding: 11px 16px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.92rem;
+    }
+    input, select, textarea {
+      background: rgba(10, 14, 24, 0.85);
+      border: 1px solid var(--bd);
+      color: var(--tx);
+      outline: none;
+      transition: all 0.25s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--ac);
+      box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15), 0 0 15px var(--glow-soft);
+    }
+    input {
+      max-width: 100%;
+      width: 280px;
+    }
+    td, th {
+      padding: 13px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    th {
+      background: rgba(12, 16, 28, 0.7);
+      color: var(--tx3);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    tbody tr {
+      transition: background 0.2s ease;
+    }
+    tbody tr:hover {
+      background: rgba(0, 240, 255, 0.03);
+    }
+    #dashboard[hidden], #login[hidden] {
+      display: none;
+    }
+    .scroll {
+      overflow-x: auto;
+      border: 1px solid var(--bd);
+      border-radius: 14px;
+      background: rgba(10, 14, 24, 0.6);
+      margin-top: 14px;
+    }
+    .error {
+      color: #ff6b6b;
+      margin-top: 12px;
+      font-weight: 600;
+    }
+    #message {
+      margin: 14px 0;
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      color: #c4f9ff;
+      font-weight: 500;
+      display: none;
+    }
+    #message:not(:empty) {
+      display: block;
+    }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    label {
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--tx2);
+    }
+
+    .pw-result-box { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:260px; margin-top:8px; padding:10px; border:1px solid rgba(0,240,255,.35); border-radius:10px; background:rgba(0,240,255,.07); }
+    .pw-result-box strong { flex-basis:100%; color:var(--ac); font-size:.85rem; }
+    .pw-result-value { width:220px; max-width:100%; color:var(--tx) !important; background:rgba(0,0,0,.35) !important; }
+    .pw-result-error { margin-top:8px; min-width:240px; color:#ffb4b4; white-space:normal; }
+  </style>
+</head>
+<body>
+  <main class="admin">
+    <div class="admin-header">
+      <div>
+        <h1>🛡️ BDShopVN Admin</h1>
+        <p class="muted small">Bảng điều khiển quản lý đơn hàng và kho acc Blox Fruits</p>
+      </div>
+      <a class="back-link" href="index.html#/">← Về trang shop</a>
+    </div>
+
+    <section class="card" id="login">
+      <h2>Đăng nhập Admin</h2>
+      <p class="muted small">Chỉ tài khoản đã được cấp quyền trong <code>admin_users</code> mới xem và duyệt đơn.</p>
+      <form id="loginForm">
+        <input type="email" id="email" placeholder="Email Admin" required autocomplete="username">
+        <input type="password" id="password" placeholder="Mật khẩu" required autocomplete="current-password">
+        <button class="btn btn-p">Đăng nhập</button>
+      </form>
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <section id="dashboard" hidden>
+      <div class="toolbar">
+        <button class="btn btn-g btn-s" id="logout">Đăng xuất</button>
+        <button class="btn btn-p btn-s" id="refresh">🔄 Làm mới đơn</button>
+      </div>
+      <p id="message"></p>
+
+      <div class="card">
+        <h2>📁 Quản lý danh mục acc</h2>
+        <p>Tạo danh mục mới và đặt giá áp dụng tự động cho mọi acc trong danh mục.</p>
+        <form id="categoryForm">
+          <input id="catName" placeholder="Tên danh mục (VD: Acc VIP)" required>
+          <input id="catPrice" type="number" min="0" step="1000" value="50000" placeholder="Giá (VNĐ)" required>
+          <label style="display:inline-flex;align-items:center;gap:6px">
+            <input type="checkbox" id="catBlindbag" style="width:auto"> Danh mục túi mù
+          </label>
+          <button class="btn btn-p">Thêm danh mục</button>
+        </form>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Danh mục</th>
+                <th>Giá</th>
+                <th>Loại</th>
+                <th>Hiển thị</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="accCategories"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📤 Đăng acc vào kho</h2>
+        <p>Chọn danh mục; giá sẽ tự lấy theo danh mục. Thông tin đăng nhập được lưu riêng, không hiển thị cho tài khoản.</p>
+        <form id="accForm">
+          <select id="accCategory" required style="min-width:240px">
+            <option value="">Chọn danh mục</option>
+          </select>
+          <input id="accCode" placeholder="Mã acc (VD: VIP001) — để trống tự tạo">
+          <input id="accName" placeholder="Tên / tiêu đề acc" required>
+          <input id="accPrice" type="number" min="0" step="1000" placeholder="Giá riêng (chỉ Acc tự chọn)" hidden>
+          <input id="accLogin" placeholder="Thông tin đăng nhập (chỉ Admin xem)" required>
+          <textarea id="accDetails" placeholder="Thông số công khai: level, trái, kiếm..." rows="3" style="width:min(100%,600px);vertical-align:middle"></textarea>
+          <div id="accImageFields" hidden style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:12px;margin:8px 0;background:rgba(0,0,0,0.25)">
+            <b style="color:#fff">Ảnh cho acc</b>
+            <p class="muted small" style="margin:6px 0 12px">Acc tự chọn và Acc túi mù: chọn 1 ảnh bìa chính và tối đa 30 ảnh phụ. Acc túi mù sẽ dùng ảnh TÚI MÙ 50K mặc định nếu không tải ảnh riêng.</p>
+            <label for="accCoverImage" style="display:block;margin-bottom:4px">Ảnh chính làm bìa (không bắt buộc)</label>
+            <input id="accCoverImage" type="file" accept="image/*" style="width:100%;margin-bottom:12px">
+            <label for="accGalleryImages" style="display:block;margin-bottom:4px">Ảnh phụ (tối đa 30 ảnh)</label>
+            <input id="accGalleryImages" type="file" accept="image/*" multiple style="width:100%">
+            <div id="accImagePreview" class="muted small" style="margin-top:8px"></div>
+          </div>
+          <button class="btn btn-p">Upload acc</button>
+        </form>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã</th>
+                <th>Danh mục</th>
+                <th>Tên acc</th>
+                <th>Giá</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="accInventory"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📦 Danh sách đơn hàng</h2>
+        <div class="toolbar" style="margin-top:0">
+          <label style="display:inline-flex;align-items:center;gap:8px">
+            <input type="checkbox" id="showCompleted" style="width:auto;margin:0"> Hiện cả đơn đã hoàn thành
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:6px">
+            <input type="checkbox" id="showArchived" style="width:auto"> Xem đơn đã dọn
+          </label>
+          <label style="display:inline-flex;align-items:center;gap:6px">
+            <input type="checkbox" id="selectAll" style="width:auto"> Chọn tất cả đang hiển thị
+          </label>
+          <span id="selectedCount" class="muted small">Đã chọn 0 đơn</span>
+          <button class="btn btn-p btn-s" id="archiveSelected" disabled>Dọn đơn đã chọn</button>
+          <button class="btn btn-g btn-s" id="restoreSelected" disabled>Khôi phục đơn đã chọn</button>
+        </div>
+        <p id="orderCounts" class="muted small"></p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Chọn</th>
+                <th>Mã đơn</th>
+                <th>Tài khoản</th>
+                <th>Liên hệ</th>
+                <th>Sản phẩm</th>
+                <th>Tổng</th>
+                <th>Trạng thái</th>
+                <th>Mật khẩu dịch vụ</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="orders"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/admin.js?v=12"></script>
+  <script>window.addEventListener("error",function(e){if(e.target&&e.target.tagName==="SCRIPT"){var m=document.getElementById("message");if(m)m.textContent="Không tải được tệp JavaScript: "+(e.target.src||"");}},true);</script>
+</body>
+</html>
