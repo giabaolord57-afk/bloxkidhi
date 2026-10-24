@@ -167,6 +167,11 @@
       font-size: 0.9rem;
       color: var(--tx2);
     }
+
+    .pw-result-box { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:260px; margin-top:8px; padding:10px; border:1px solid rgba(0,240,255,.35); border-radius:10px; background:rgba(0,240,255,.07); }
+    .pw-result-box strong { flex-basis:100%; color:var(--ac); font-size:.85rem; }
+    .pw-result-value { width:220px; max-width:100%; color:var(--tx) !important; background:rgba(0,0,0,.35) !important; }
+    .pw-result-error { margin-top:8px; min-width:240px; color:#ffb4b4; white-space:normal; }
   </style>
 </head>
 <body>
@@ -305,6 +310,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/supabase.js"></script>
-  <script src="js/admin.js?v=9"></script>
+  <script src="js/admin.js?v=10"></script>
 </body>
 </html>
