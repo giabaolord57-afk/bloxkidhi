@@ -1,6 +1,0 @@
-1. Upload all website files in this ZIP to Vercel, keeping index.html and admin.html at the root.
-2. In Supabase SQL Editor run ADMIN-QUYEN-SUPABASE.sql (review existing policies first).
-3. Authentication > Users > Add user; copy the new user's UUID.
-4. SQL Editor: INSERT INTO public.admin_users(user_id) VALUES ('YOUR-UUID') ON CONFLICT DO NOTHING;
-5. Open https://bdshopp-vng.vercel.app/admin.html?v=3, sign in with that Auth user's email and password.
-6. If unauthorized, verify the UUID, SQL function, RLS and existing policies. Do not use the Supabase dashboard/database password.
