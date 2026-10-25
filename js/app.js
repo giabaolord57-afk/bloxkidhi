@@ -256,8 +256,12 @@
       </form>
     </div>`;
   };
-  views["gio-hang"].after = () => {
+
+views["gio-hang"].after = () => {
     const f = $("#co"); if (!f) return;
+    const total = getCart().reduce(
+        (sum, item) => sum + item.unit * item.qty, 0
+    );
     const cardFields = $('#cardPayFields'), bankFields = $('#bankPayFields');
     const cardList = $('#cardList'), addCardBtn = $('#addCardBtn');
     const cardOptions = [10000,20000,30000,50000,100000,200000,300000,500000];
