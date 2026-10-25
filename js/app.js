@@ -241,21 +241,15 @@
           <p class="muted small">Sau khi tạo đơn, chuyển đúng số tiền với nội dung là mã đơn. Bạn có thể tải ảnh/PDF biên lai ở mục gửi bill bên dưới.</p></section>
         <section id="cardPayFields" class="pay-extra" hidden>
           <h4>🎟️ Thanh toán bằng thẻ cào</h4>
-          <p class="muted small">Thêm một hoặc nhiều thẻ. Giá trị thanh toán được tính sau khi trừ chiết khấu từng thẻ.</p>
+          <p class="muted small">Thêm một hoặc nhiều thẻ. Phí chiết khấu được cộng theo giá gốc đơn hàng.</p>
           <div id="cardList" class="card-list"></div>
           <button type="button" class="btn btn-s" id="addCardBtn">＋ Thêm card</button>
-          <div class="pay" style="margin-top:12px">
-            <div class="r"><span>Giá gốc đơn hàng</span><b id="cardOriginalTotal">${vnd(total)}</b></div>
-            <div class="r"><span>Tổng chiết khấu thẻ</span><b id="cardDiscountTotal">0đ</b></div>
-            <div class="r"><span>Giá trị thẻ sau chiết khấu</span><b id="cardNetTotal">0đ</b></div>
-            <div class="r"><span>Còn thiếu</span><b id="cardRemaining">${vnd(total)}</b></div>
-          </div>
-          <p class="muted small">Chiết khấu: dưới 50.000đ = 20%; 50.000–100.000đ = 15%; trên 100.000đ = 10%. Admin sẽ kiểm tra thẻ thủ công.</p>
+          <p class="muted small">Phí theo giá đơn: đến 100.000đ: 20%; trên 100.000đ đến 200.000đ: 15%; trên 200.000đ: 12%. Admin kiểm tra thẻ thủ công.</p>
         </section>
         <div class="field"><label class="f" for="paymentBill">Ảnh bill chuyển khoản (tùy chọn)</label><input type="file" name="paymentBill" id="paymentBill" accept="image/*,.pdf" aria-describedby="paymentBillHelp"><p class="muted small" id="paymentBillHelp">Nhấn “Chọn tệp” để mở thư viện ảnh/album trên điện thoại hoặc chọn ảnh, PDF trong tệp. Tối đa 5 MB.</p><div id="paymentBillPreview" class="bill-preview" hidden></div></div>
         <div class="field"><label class="f">Ghi chú</label><textarea name="note" rows="2" placeholder="Yêu cầu thêm (không ghi mật khẩu vào đây)"></textarea></div>
         <div class="sum"><span>Giá gốc</span><span id="checkoutOriginal">${vnd(total)}</span></div>
-        <div class="sum" id="checkoutDiscountRow" hidden><span>Chiết khấu thẻ</span><span id="checkoutDiscount">0đ</span></div>
+        <div class="sum" id="checkoutDiscountRow" hidden><span>Phí chiết khấu</span><span id="checkoutDiscount">0đ</span></div>
         <div class="sum t"><span id="checkoutTotalLabel">Tổng thanh toán</span><span class="price" id="checkoutTotal">${vnd(total)}</span></div>
         <button class="btn btn-p" style="width:100%;margin-top:14px">Đặt hàng</button>
         <p class="muted small" style="margin-top:10px">${needPass ? "🔒 Chỉ cung cấp mật khẩu nếu bạn đồng ý để shop đăng nhập thực hiện đơn. Đổi mật khẩu ngay sau khi hoàn tất; không dùng lại mật khẩu ở dịch vụ khác." : "Đơn này không yêu cầu mật khẩu Roblox."}</p>
@@ -267,7 +261,9 @@
     const cardFields = $('#cardPayFields'), bankFields = $('#bankPayFields');
     const cardList = $('#cardList'), addCardBtn = $('#addCardBtn');
     const cardOptions = [10000,20000,30000,50000,100000,200000,300000,500000];
-    const feeRateFor = amount => amount > 0 ? (amount < 50000 ? .20 : amount <= 100000 ? .15 : .10) : 0;
+    const feeRateFor = amount => amount <= 100000 ? .20 : amount <= 200000 ? .15 : .12;
+    const feeRate = feeRateFor(total);
+    const fee = Math.round(total * feeRate);
     const addCardRow = () => {
       const i = cardList.children.length;
       const row = document.createElement('div'); row.className = 'card-entry';
@@ -285,35 +281,25 @@
       cardList.querySelectorAll('.card-entry').forEach(row => {
         row.querySelectorAll('select,input').forEach(el => el.required = isCard);
         const amount = Number(row.querySelector('select[name^="cardDenomination_"]').value || 0);
-        const fee = Math.round(amount * feeRateFor(amount));
-        row.querySelector('[data-card-fee]').textContent = amount ? `${Math.round(feeRateFor(amount)*100)}% · ${vnd(fee)} · nhận ${vnd(amount-fee)}` : 'Chọn mệnh giá';
+        const cardFee = Math.round(amount * feeRate);
+        row.querySelector('[data-card-fee]').textContent = amount ? `${vnd(amount)} mệnh giá` : 'Chọn mệnh giá';
       });
       // Recalculate summary directly from every current card row, including rows added later.
       const amounts = Array.from(cardList.querySelectorAll('.card-entry select[name^="cardDenomination_"]'), el => {
         const value = Number.parseInt(el.value, 10);
         return Number.isFinite(value) && value > 0 ? value : 0;
       });
-      const discount = amounts.reduce((sum, amount) => sum + Math.round(amount * feeRateFor(amount)), 0);
-      const net = amounts.reduce((sum, amount) => sum + amount - Math.round(amount * feeRateFor(amount)), 0);
-      // Update the exact summary elements by their IDs inside the card payment section.
-      const summaryValue = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value;
-      };
-      summaryValue('cardOriginalTotal', vnd(total));
-      summaryValue('cardDiscountTotal', vnd(discount));
-      summaryValue('cardNetTotal', vnd(net));
-      summaryValue('cardRemaining', vnd(Math.max(0, total - net)) + (net > total ? ` (dư ${vnd(net - total)})` : ''));
+      const faceTotal = amounts.reduce((sum, amount) => sum + amount, 0);
       const checkoutOriginal = f.querySelector('#checkoutOriginal');
       const checkoutDiscount = f.querySelector('#checkoutDiscount');
       const discountRow = f.querySelector('#checkoutDiscountRow');
       const checkoutTotalLabel = f.querySelector('#checkoutTotalLabel');
       const checkoutTotal = f.querySelector('#checkoutTotal');
       if (checkoutOriginal) checkoutOriginal.textContent = vnd(total);
-      if (checkoutDiscount) checkoutDiscount.textContent = vnd(discount);
+      if (checkoutDiscount) checkoutDiscount.textContent = `+${vnd(fee)} (${Math.round(feeRate*100)}%)`;
       if (discountRow) discountRow.hidden = !isCard;
-      if (checkoutTotalLabel) checkoutTotalLabel.textContent = isCard ? (net >= total ? 'Tổng sau chiết khấu' : 'Còn cần thanh toán') : 'Tổng thanh toán';
-      if (checkoutTotal) checkoutTotal.textContent = vnd(isCard ? Math.max(0, total - net) : total);
+      if (checkoutTotalLabel) checkoutTotalLabel.textContent = 'Tổng thanh toán';
+      if (checkoutTotal) checkoutTotal.textContent = vnd(isCard ? total + fee : total);
       const bill = $('#paymentBill'); if(bill) bill.required = false;
     };
     const billInput = $('#paymentBill');
@@ -335,7 +321,6 @@
     cardList.addEventListener('change', updatePaymentFields);
     cardList.addEventListener('change', () => requestAnimationFrame(updatePaymentFields));
     cardList.addEventListener('input', updatePaymentFields);
-    cardList.addEventListener('click', () => requestAnimationFrame(updatePaymentFields));
     cardList.addEventListener('click', e => { const btn=e.target.closest('[data-remove-card]'); if(btn && cardList.children.length>1){btn.closest('.card-entry').remove(); updatePaymentFields();} });
     f.querySelectorAll('input[name="paymentMethod"]').forEach(el=>el.addEventListener('change', updatePaymentFields));
     addCardRow();
@@ -378,9 +363,9 @@
             const code=row.querySelector('input[name^="cardCode_"]').value.trim();
             const serial=row.querySelector('input[name^="cardSerial_"]').value.trim();
             if(!provider || !denomination || !code || !serial) throw new Error('Vui lòng nhập đủ nhà mạng, mệnh giá, mã thẻ và serial cho từng card.');
-            return {order_code:o.code,user_id:authUser.id,method:'card',status:'Chờ kiểm tra',bill_path:billPath,card_provider:provider,card_denomination:denomination,card_code:code,card_serial:serial,card_fee_percent:Math.round(feeRateFor(denomination)*100),notes:(d.note||'').trim()||null};
+            return {order_code:o.code,user_id:authUser.id,method:'card',status:'Chờ kiểm tra',bill_path:billPath,card_provider:provider,card_denomination:denomination,card_code:code,card_serial:serial,card_fee_percent:Math.round(feeRate*100),notes:(d.note||'').trim()||null};
           }) : [{order_code:o.code,user_id:authUser.id,method:o.paymentMethod,status:'Chờ kiểm tra',bill_path:billPath,card_provider:null,card_denomination:null,card_code:null,card_serial:null,card_fee_percent:null,notes:(d.note||'').trim()||null}];
-          if(isCard){ const net=cardRows.reduce((sum,r)=>sum+r.card_denomination-Math.round(r.card_denomination*r.card_fee_percent/100),0); if(net < Number(o.total)) throw new Error(`Giá trị thẻ sau chiết khấu mới ${vnd(net)}, còn thiếu ${vnd(Number(o.total)-net)}. Hãy thêm card.`); }
+          if(isCard){ const face=cardRows.reduce((sum,r)=>sum+r.card_denomination,0); const due=Number(o.total)+Math.round(Number(o.total)*feeRateFor(Number(o.total))); if(face < due) throw new Error(`Tổng mệnh giá thẻ ${vnd(face)}, cần ${vnd(due)}, còn thiếu ${vnd(due-face)}. Hãy thêm card.`); }
           const {error:subError} = await db.from('payment_submissions').insert(cardRows);
           if(subError) throw new Error('Đơn đã tạo nhưng chưa gửi được thông tin thanh toán: '+subError.message+'. Hãy gửi mã đơn cho admin.');
           o.paymentMethod = d.paymentMethod || 'bank'; o.billPath=billPath;
