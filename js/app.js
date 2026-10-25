@@ -92,7 +92,7 @@
       <div><b>Chọn sản phẩm</b>Chọn dịch vụ hoặc vật phẩm bạn cần.</div>
       <div><b>Thêm vào giỏ hàng</b>Bấm “+ Giỏ hàng” ở sản phẩm đã chọn.</div>
       <div><b>Điền thông tin</b>Vào giỏ hàng, nhập thông tin acc Roblox (cần cày / cần mua) và thông tin liên hệ của bạn.</div>
-      <div><b>Gửi mã đơn & thanh toán</b>Sau khi đặt, mã đơn hàng sẽ hiện ra. Liên hệ admin, gửi mã đơn rồi thanh toán.</div>
+      <div><b>Chọn phương thức thanh toán</b>Chuyển khoản: chụp và gửi ảnh bill. Thẻ cào: nhập mã thẻ và số serial.</div>
       <div><b>Chờ hoàn thành</b>Admin xử lý đơn, bạn theo dõi trạng thái ở mục Đơn hàng.</div>
     </div>`;
   };
