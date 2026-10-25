@@ -512,6 +512,7 @@ views["gio-hang"].after = () => {
     AS.categories=AS.categories.map(prepCategory);
     AS.blindbag={...AS.blindbag, ...((AS.categories.find(c=>c.is_blindbag))||{}), accounts:AS.accounts.filter(a=>AS.categories.find(c=>c.id===a.category_id)?.is_blindbag)};
   }
+  const accDetails = (a) => String(a.details||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
   const ACCF = { game: "", sort: "new" };
   views.acc = (p=[]) => {
     const selected=p[0], cats=AS.categories, list=AS.accounts.filter(a=>!selected||a.category_id===selected), current=cats.find(c=>c.id===selected);
@@ -545,11 +546,36 @@ views["gio-hang"].after = () => {
   };
   function accCard(a) {
     const c=AS.categories.find(z=>z.id===a.category_id), details=String(a.details||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
-    return `<div class="card prod">${a.cover_url?`<img src="${esc(a.cover_url)}" alt="${esc(a.name)}" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:10px">`:''}${Array.isArray(a.gallery_urls)&&a.gallery_urls.length?`<div class="acc-gallery-preview" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 12px">${a.gallery_urls.slice(0,8).map((u,i)=>`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" aria-label="Xem ảnh phụ ${i+1}"><img src="${esc(u)}" alt="${esc(a.name)} - ảnh phụ ${i+1}" loading="lazy" style="display:block;width:100%;height:72px;object-fit:cover;border-radius:7px"></a>`).join('')}</div>`:''}<div class="acc-top"><span class="acc-id">Mã: ${esc(a.code)}</span><span class="tag">${esc(c?.name||'Acc')}</span></div>${a.game?`<div class="acc-game">🎮 ${esc(a.game)}</div>`:''}<h3>👤 ${esc(a.name)}</h3>${details.length?`<dl class="kv">${details.map((d,i)=>`<dt>${i===0?'Thông tin':'Chi tiết '+(i+1)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>`:''}<div class="pf"><span class="price">${vnd(accPrice(a))}</span><a class="btn btn-p btn-s" href="#/mua-acc/${esc(a.code)}">Chọn acc</a></div></div>`;
+    return `<div class="card prod">${a.cover_url?`<img src="${esc(a.cover_url)}" alt="${esc(a.name)}" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:10px">`:''}${Array.isArray(a.gallery_urls)&&a.gallery_urls.length?`<div class="acc-gallery-preview" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 12px">${a.gallery_urls.slice(0,8).map((u,i)=>`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" aria-label="Xem ảnh phụ ${i+1}"><img src="${esc(u)}" alt="${esc(a.name)} - ảnh phụ ${i+1}" loading="lazy" style="display:block;width:100%;height:72px;object-fit:cover;border-radius:7px"></a>`).join('')}</div>`:''}<div class="acc-top"><span class="acc-id">Mã: ${esc(a.code)}</span><span class="tag">${esc(c?.name||'Acc')}</span></div>${a.game?`<div class="acc-game">🎮 ${esc(a.game)}</div>`:''}<h3>👤 ${esc(a.name)}</h3>${details.length?`<dl class="kv">${details.map((d,i)=>`<dt>${i===0?'Thông tin':'Chi tiết '+(i+1)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>`:''}<div class="pf"><span class="price">${vnd(accPrice(a))}</span><span style="display:flex;gap:8px"><a class="btn btn-g btn-s" href="#/chi-tiet/${esc(a.code)}">Chi tiết</a><a class="btn btn-p btn-s" href="#/mua-acc/${esc(a.code)}">Chọn acc</a></span></div></div>`;
   }
   views["tui-mu"] = () => {
     const B=AS.blindbag, cat=AS.categories.find(c=>c.is_blindbag);
-    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Acc túi mù Blox</div><h1>Acc túi mù Blox</h1><p>Mỗi acc giá <b>${vnd(cat?.price ?? 50000)}</b>. Chọn acc đang có trong kho.</p></div>${B.accounts.length?`<div class="grid g3">${B.accounts.map(a=>`<div class="card bag"><img src="${esc(a.cover_url||'img/tui-mu-50k-cover.jpg')}" alt="${esc(a.name||'Acc túi mù Blox 50K')}" loading="lazy" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:12px"><div class="muted small">Mã: ${esc(a.code)}</div><h3>${esc(a.name)}</h3><div class="price" style="font-size:1.4rem">${vnd(accPrice(a))}</div><a class="btn btn-pu" href="#/mua-acc/${esc(a.code)}">🎲 Chọn acc này</a></div>`).join('')}</div>`:`<div class="empty"><div class="big">🎒</div><h2>Chưa có acc túi mù</h2><p>Admin sẽ cập nhật thêm acc sau.</p></div>`}<p style="margin-top:18px"><a href="#/acc">Xem tất cả danh mục acc →</a></p>`;
+    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Acc túi mù Blox</div><h1>Acc túi mù Blox</h1><p>Mỗi acc giá <b>${vnd(cat?.price ?? 50000)}</b>. Chọn acc đang có trong kho.</p></div>${B.accounts.length?`<div class="grid g3">${B.accounts.map(a=>`<div class="card bag"><img src="${esc(a.cover_url||'img/tui-mu-50k-cover.jpg')}" alt="${esc(a.name||'Acc túi mù Blox 50K')}" loading="lazy" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:12px"><div class="muted small">Mã: ${esc(a.code)}</div><h3>${esc(a.name)}</h3><div class="price" style="font-size:1.4rem">${vnd(accPrice(a))}</div>${accDetails(a).length?`<ul class="acc-brief" style="margin:10px 0 12px;padding-left:18px;color:var(--tx2);font-size:.9rem;line-height:1.5">${accDetails(a).slice(0,4).map(d=>`<li>${esc(d)}</li>`).join('')}${accDetails(a).length>4?'<li>…</li>':''}</ul>`:''}<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-g" href="#/chi-tiet/${esc(a.code)}">🔍 Chi tiết acc</a><a class="btn btn-pu" href="#/mua-acc/${esc(a.code)}">🎲 Chọn acc này</a></div></div>`).join('')}</div>`:`<div class="empty"><div class="big">🎒</div><h2>Chưa có acc túi mù</h2><p>Admin sẽ cập nhật thêm acc sau.</p></div>`}<p style="margin-top:18px"><a href="#/acc">Xem tất cả danh mục acc →</a></p>`;
+  };
+
+  views["chi-tiet"] = (p) => {
+    const f = findAcc(p[0]);
+    if (!f) return `<div class="empty"><div class="big">🤔</div><h2>Không tìm thấy acc</h2><p><a href="#/acc">Xem acc Roblox tự chọn</a> · <a href="#/tui-mu">Xem acc túi mù Blox</a></p></div>`;
+    const { x, bag } = f, price = accPrice(x), category = AS.categories.find(c=>c.id===x.category_id), det = accDetails(x);
+    const cover = x.cover_url || (bag ? "img/tui-mu-50k-cover.jpg" : "");
+    const gal = Array.isArray(x.gallery_urls) ? x.gallery_urls : [];
+    const back = bag ? "#/tui-mu" : "#/acc";
+    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / <a href="${back}">${esc(category?.name || (bag ? "Acc túi mù Blox" : "Acc Roblox tự chọn"))}</a> / ${esc(x.code)}</div><h1>${esc(x.name)}</h1></div>
+    <div class="layout">
+      <div class="card">
+        ${cover?`<a href="${esc(cover)}" target="_blank" rel="noopener"><img src="${esc(cover)}" alt="${esc(x.name)}" style="width:100%;max-height:460px;object-fit:contain;border-radius:12px;margin-bottom:12px"></a>`:''}
+        ${gal.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px">${gal.slice(0,30).map((u,i)=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Ảnh ${i+1}" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px"></a>`).join('')}</div>`:''}
+        ${!cover&&!gal.length?'<div class="muted">Acc này chưa có ảnh.</div>':''}
+      </div>
+      <div class="card">
+        <div class="muted small">Mã: ${esc(x.code)}</div>
+        <h3 style="margin:6px 0 10px">👤 ${esc(x.name)}</h3>
+        <div class="price" style="font-size:1.6rem;margin-bottom:14px">${vnd(price)}</div>
+        <h4 style="margin:0 0 8px">Thông tin acc</h4>
+        ${det.length?`<ul style="margin:0 0 16px;padding-left:20px;line-height:1.7">${det.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:'<p class="muted" style="margin-bottom:16px">Admin chưa nhập thông số cho acc này.</p>'}
+        <div class="row"><a class="btn btn-p" href="#/mua-acc/${esc(x.code)}">Chọn acc này</a><a class="btn btn-g" href="${back}">← Quay lại</a></div>
+      </div>
+    </div>`;
   };
 
   views["mua-acc"] = (p) => {
@@ -567,7 +593,7 @@ views["gio-hang"].after = () => {
         ${x.cover_url?`<img src="${esc(x.cover_url)}" alt="${esc(x.name)}" style="width:100%;max-height:420px;object-fit:contain;border-radius:12px;margin-bottom:12px">`:''}${Array.isArray(x.gallery_urls)&&x.gallery_urls.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px">${x.gallery_urls.slice(0,30).map((u,i)=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Ảnh phụ ${i+1}" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px"></a>`).join('')}</div>`:''}
         <div class="buycode"><span class="muted small">MÃ ACC CỦA BẠN</span><b id="bcode">${esc(x.code)}</b>
           <button class="btn btn-g btn-s" data-copy="${esc(x.code)}">Sao chép mã</button></div>
-        <dl class="kv" style="margin-top:14px"><dt>Tên acc</dt><dd>${esc(x.name)}</dd><dt>Game</dt><dd>${esc(x.game||"—")}</dd><dt>Loại</dt><dd>${esc(category?.name || (bag ? "Acc túi mù Blox" : "Acc Roblox tự chọn"))}</dd><dt>Giá</dt><dd><b class="price">${vnd(price)}</b></dd></dl>
+        <dl class="kv" style="margin-top:14px"><dt>Tên acc</dt><dd>${esc(x.name)}</dd><dt>Game</dt><dd>${esc(x.game||"—")}</dd><dt>Loại</dt><dd>${esc(category?.name || (bag ? "Acc túi mù Blox" : "Acc Roblox tự chọn"))}</dd><dt>Giá</dt><dd><b class="price">${vnd(price)}</b></dd>${accDetails(x).map((d,i)=>`<dt>${i===0?'Thông tin':'Chi tiết '+(i+1)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>
         <div class="buysteps">
           <div><b>Gửi mã acc cho admin</b>Nhắn mã <b>${esc(x.code)}</b> cho admin qua Zalo hoặc Facebook.
             <div class="row" style="margin-top:10px"><button class="btn btn-p btn-s" data-copy="${esc(msg)}">Sao chép tin nhắn</button>
