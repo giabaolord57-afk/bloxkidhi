@@ -6,8 +6,9 @@
 (function () {
   "use strict";
 
-  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const hover = window.matchMedia && matchMedia("(hover:hover)").matches;
+  // Điện thoại/cảm ứng: chạy chế độ nhẹ (tắt tia lửa, gợn sóng, hiện dần khi cuộn...) cho đỡ lag.
+  const reduce = (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) || !hover;
 
   /* ---------- 1) CON TRỎ PHÁT SÁNG NĂNG LƯỢNG (PLASMA CURSOR GLOW) ---------- */
   if (!reduce && hover) {

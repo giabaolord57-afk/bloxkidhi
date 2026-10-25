@@ -84,8 +84,8 @@
       <a class="card hv cat" href="#/vat-pham"><span class="ico">💎</span><h3>Vật phẩm Blox Fruits</h3><p>Robux 120H, trái ác quỷ vĩnh viễn, trái rương, gamepass.</p><span class="go">Xem vật phẩm →</span></a>
       <a class="card hv cat" href="#/cay-thue"><span class="ico">⚔️</span><h3>Cày thuê Blox Fruits</h3><p>Level, Sea, Race V4, CDK, Godhuman, Mastery, Beli…</p><span class="go">Xem bảng giá →</span></a>
       <a class="card hv cat" href="#/steal-an-egg"><span class="ico">🥚</span><h3>Steal An Egg</h3><p>Cày thuê Steal An Egg theo ngày (25k/ngày), auto sự kiện, chạy bộ, cướp trứng, upgrade...</p><span class="go">Xem dịch vụ →</span></a>
-      <a class="card hv cat" href="#/acc"><span class="ico">🎮</span><h3>Acc tự chọn</h3><p>Chọn acc theo tên, xem thông số. Gửi mã acc cho admin rồi thanh toán để nhận mật khẩu.</p><span class="go">Chọn acc →</span></a>
-      <a class="card hv cat" href="#/tui-mu"><span class="ico">🎒</span><h3>Acc túi mù</h3><p>50.000đ / acc. 100% có Soul Guitar, CDK, Godhuman.</p><span class="go">Xem acc túi mù →</span></a>
+      <a class="card hv cat" href="#/acc"><span class="ico">🎮</span><h3>Acc Roblox tự chọn</h3><p>Lọc theo game (Blox Fruits, Steal An Egg…), sắp xếp theo giá, xem thông số. Gửi mã acc cho admin rồi thanh toán để nhận mật khẩu.</p><span class="go">Chọn acc →</span></a>
+      <a class="card hv cat" href="#/tui-mu"><span class="ico">🎒</span><h3>Acc túi mù Blox</h3><p>50.000đ / acc. 100% có Soul Guitar, CDK, Godhuman.</p><span class="go">Xem acc túi mù Blox →</span></a>
       <a class="card hv cat" href="#/don-hang"><span class="ico">📦</span><h3>Đơn hàng của tôi</h3><p>Theo dõi trạng thái các đơn bạn đã đặt trên thiết bị này.</p><span class="go">Xem đơn →</span></a>
       <a class="card hv cat" href="${esc(S.contact.zalo)}" target="_blank" rel="noopener"><span class="ico">💬</span><h3>Hỗ trợ Zalo</h3><p>Cần tư vấn, đặt đơn lớn hay hỏi bảo hành? Nhắn ngay.</p><span class="go">Nhắn Zalo →</span></a>
     </div>
@@ -492,49 +492,82 @@ views["gio-hang"].after = () => {
   const AS = { blindbag: { price: 50000, odds: [], accounts: [] }, accounts: [], categories: [] };
   const accPrice = (x) => { const c=AS.categories.find(z=>z.id===x.category_id); return x.price!==null&&x.price!==undefined ? Number(x.price) : (c ? Number(c.price) : 50000); };
   const findAcc = (code) => { const x=AS.accounts.find(a=>a.code===code); return x ? {x,bag:!!AS.categories.find(c=>c.id===x.category_id)?.is_blindbag}:null; };
+  const normVN = (t) => String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/\s+/g," ").trim();
+  const CUSTOM_LABEL = "Acc Roblox tự chọn", BAG_LABEL = "Acc túi mù Blox";
+  const prepCategory = (c) => {
+    const n = normVN(c.name), bag = Boolean(c.is_blindbag || n.includes("tui mu")), custom = !bag && n.includes("tu chon");
+    return { ...c, is_blindbag: bag, is_custom: custom, name: bag ? BAG_LABEL : custom ? CUSTOM_LABEL : c.name };
+  };
   async function refreshAccData(){
     if(!db)return;
-    const [cr,ar]=await Promise.all([
+    const cols='id,category_id,code,name,details,price,cover_url,gallery_urls,active,sold,created_at';
+    const q=(c)=>db.from('acc_inventory').select(c).eq('active',true).eq('sold',false).order('created_at',{ascending:false});
+    let [cr,ar]=await Promise.all([
       db.from('acc_categories').select('id,name,price,is_blindbag,active').eq('active',true).order('created_at',{ascending:true}),
-      db.from('acc_inventory').select('id,category_id,code,name,details,price,cover_url,gallery_urls,active,sold').eq('active',true).eq('sold',false).order('created_at',{ascending:false})
+      q(cols+',game')
     ]);
+    if(ar.error) ar=await q(cols); // chưa chạy SQL thêm cột game -> vẫn hiển thị acc
     if(!cr.error) AS.categories=cr.data||[];
-    if(!ar.error) AS.accounts=ar.data||[];
-    AS.categories=AS.categories.map(c=>({...c,is_blindbag: Boolean(c.is_blindbag || ['túi mù','tui mu','acc túi mù','acc tui mu'].includes(String(c.name||'').trim().toLocaleLowerCase('vi-VN')))}));
+    if(!ar.error) AS.accounts=(ar.data||[]).map(a=>({...a,game:String(a.game||'').trim()}));
+    AS.categories=AS.categories.map(prepCategory);
     AS.blindbag={...AS.blindbag, ...((AS.categories.find(c=>c.is_blindbag))||{}), accounts:AS.accounts.filter(a=>AS.categories.find(c=>c.id===a.category_id)?.is_blindbag)};
   }
+  const ACCF = { game: "", sort: "new" };
   views.acc = (p=[]) => {
     const selected=p[0], cats=AS.categories, list=AS.accounts.filter(a=>!selected||a.category_id===selected), current=cats.find(c=>c.id===selected);
-    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Kho acc</div><h1>${current?esc(current.name):'Tất cả acc'}</h1><p>Chọn danh mục để xem acc đang bán. Giá từng acc tự động lấy từ giá của danh mục.</p></div>
-    <div class="tabs"><a class="tab ${!selected?'on':''}" href="#/acc">Tất cả danh mục</a>${cats.map(c=>`<a class="tab ${c.id===selected?'on':''}" href="#/acc/${esc(c.id)}">${c.is_blindbag?'🎒':'🎮'} ${esc(c.name)}${String(c.name||'').trim().toLocaleLowerCase('vi-VN')==='acc tự chọn'?'':` · ${vnd(c.price)}`}</a>`).join('')}</div>
-    ${list.length?`<div class="search"><span>🔍</span><input type="search" id="q" placeholder="Tìm theo tên, thông số hoặc mã acc…" autocomplete="off"></div><div class="grid g3" id="list">${list.map(accCard).join('')}</div><div class="empty" id="none" hidden>Không tìm thấy acc phù hợp.</div>`:`<div class="empty"><div class="big">🎮</div><h2>Chưa có acc đang bán</h2><p>Admin sẽ cập nhật thêm acc sau.</p><p style="margin-top:16px"><a class="btn btn-p" href="${esc(S.contact.zalo)}" target="_blank" rel="noopener">💬 Nhắn Zalo admin</a></p></div>`}`;
+    const games=[...new Set(list.map(a=>a.game).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    if(ACCF.game && !games.includes(ACCF.game)) ACCF.game="";
+    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Kho acc</div><h1>${current?esc(current.name):'Tất cả acc'}</h1><p>Chọn danh mục và game để xem acc đang bán. Có thể sắp xếp theo giá từ thấp đến cao hoặc từ cao xuống thấp.</p></div>
+    <div class="tabs"><a class="tab ${!selected?'on':''}" href="#/acc">Tất cả danh mục</a>${cats.map(c=>`<a class="tab ${c.id===selected?'on':''}" href="#/acc/${esc(c.id)}">${c.is_blindbag?'🎒':'🎮'} ${esc(c.name)}${c.is_custom?'':` · ${vnd(c.price)}`}</a>`).join('')}</div>
+    ${list.length?`<div class="accfilter">
+      ${games.length?`<div class="accfilter-row"><span class="accfilter-lb">Game</span><div class="tabs" id="gameTabs" style="margin:0"><button type="button" class="tab ${!ACCF.game?'on':''}" data-game="">Tất cả game</button>${games.map(g=>`<button type="button" class="tab ${ACCF.game===g?'on':''}" data-game="${esc(g)}">${esc(g)}</button>`).join('')}</div></div>`:''}
+      <div class="accfilter-row"><span class="accfilter-lb">Sắp xếp</span><select id="accSort" class="accsort"><option value="new" ${ACCF.sort==='new'?'selected':''}>Mới nhất</option><option value="asc" ${ACCF.sort==='asc'?'selected':''}>Giá: thấp → cao</option><option value="desc" ${ACCF.sort==='desc'?'selected':''}>Giá: cao → thấp</option></select><span class="muted small" id="accCount"></span></div>
+    </div>
+    <div class="search"><span>🔍</span><input type="search" id="q" placeholder="Tìm theo tên, game, thông số hoặc mã acc…" autocomplete="off"></div><div class="grid g3" id="list"></div><div class="empty" id="none" hidden>Không tìm thấy acc phù hợp.</div>`:`<div class="empty"><div class="big">🎮</div><h2>Chưa có acc đang bán</h2><p>Admin sẽ cập nhật thêm acc sau.</p><p style="margin-top:16px"><a class="btn btn-p" href="${esc(S.contact.zalo)}" target="_blank" rel="noopener">💬 Nhắn Zalo admin</a></p></div>`}`;
   };
-  views.acc.after = () => bindSearch();
+  views.acc.after = (p=[]) => {
+    const selected=p[0], list=AS.accounts.filter(a=>!selected||a.category_id===selected), q=$("#q");
+    if(!q) return;
+    const draw=()=>{
+      const k=normVN(q.value);
+      let rows=list.filter(a=>(!ACCF.game||a.game===ACCF.game)&&(!k||normVN([a.code,a.name,a.details,a.game,AS.categories.find(c=>c.id===a.category_id)?.name].join(" ")).includes(k)));
+      if(ACCF.sort==="asc") rows=[...rows].sort((a,b)=>accPrice(a)-accPrice(b));
+      else if(ACCF.sort==="desc") rows=[...rows].sort((a,b)=>accPrice(b)-accPrice(a));
+      $("#list").innerHTML=rows.map(accCard).join("");
+      $("#none").hidden=rows.length>0;
+      $("#accCount").textContent=rows.length+" acc";
+    };
+    draw();
+    q.addEventListener("input",draw);
+    $("#accSort").addEventListener("change",e=>{ACCF.sort=e.target.value;draw();});
+    const gt=$("#gameTabs");
+    if(gt) gt.addEventListener("click",e=>{const b=e.target.closest("[data-game]");if(!b)return;ACCF.game=b.dataset.game;gt.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));draw();});
+  };
   function accCard(a) {
     const c=AS.categories.find(z=>z.id===a.category_id), details=String(a.details||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
-    return `<div class="card prod">${a.cover_url?`<img src="${esc(a.cover_url)}" alt="${esc(a.name)}" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:10px">`:''}${Array.isArray(a.gallery_urls)&&a.gallery_urls.length?`<div class="acc-gallery-preview" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 12px">${a.gallery_urls.slice(0,8).map((u,i)=>`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" aria-label="Xem ảnh phụ ${i+1}"><img src="${esc(u)}" alt="${esc(a.name)} - ảnh phụ ${i+1}" loading="lazy" style="display:block;width:100%;height:72px;object-fit:cover;border-radius:7px"></a>`).join('')}</div>`:''}<div class="acc-top"><span class="acc-id">Mã: ${esc(a.code)}</span><span class="tag">${esc(c?.name||'Acc')}</span></div><h3>👤 ${esc(a.name)}</h3>${details.length?`<dl class="kv">${details.map((d,i)=>`<dt>${i===0?'Thông tin':'Chi tiết '+(i+1)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>`:''}<div class="pf"><span class="price">${vnd(accPrice(a))}</span><a class="btn btn-p btn-s" href="#/mua-acc/${esc(a.code)}">Chọn acc</a></div></div>`;
+    return `<div class="card prod">${a.cover_url?`<img src="${esc(a.cover_url)}" alt="${esc(a.name)}" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:10px">`:''}${Array.isArray(a.gallery_urls)&&a.gallery_urls.length?`<div class="acc-gallery-preview" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 12px">${a.gallery_urls.slice(0,8).map((u,i)=>`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" aria-label="Xem ảnh phụ ${i+1}"><img src="${esc(u)}" alt="${esc(a.name)} - ảnh phụ ${i+1}" loading="lazy" style="display:block;width:100%;height:72px;object-fit:cover;border-radius:7px"></a>`).join('')}</div>`:''}<div class="acc-top"><span class="acc-id">Mã: ${esc(a.code)}</span><span class="tag">${esc(c?.name||'Acc')}</span></div>${a.game?`<div class="acc-game">🎮 ${esc(a.game)}</div>`:''}<h3>👤 ${esc(a.name)}</h3>${details.length?`<dl class="kv">${details.map((d,i)=>`<dt>${i===0?'Thông tin':'Chi tiết '+(i+1)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>`:''}<div class="pf"><span class="price">${vnd(accPrice(a))}</span><a class="btn btn-p btn-s" href="#/mua-acc/${esc(a.code)}">Chọn acc</a></div></div>`;
   }
   views["tui-mu"] = () => {
     const B=AS.blindbag, cat=AS.categories.find(c=>c.is_blindbag);
-    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Acc túi mù</div><h1>Acc túi mù</h1><p>Mỗi acc giá <b>${vnd(cat?.price ?? 50000)}</b>. Chọn acc đang có trong kho.</p></div>${B.accounts.length?`<div class="grid g3">${B.accounts.map(a=>`<div class="card bag"><img src="${esc(a.cover_url||'img/tui-mu-50k-cover.jpg')}" alt="${esc(a.name||'Acc túi mù 50K')}" loading="lazy" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:12px"><div class="muted small">Mã: ${esc(a.code)}</div><h3>${esc(a.name)}</h3><div class="price" style="font-size:1.4rem">${vnd(accPrice(a))}</div><a class="btn btn-pu" href="#/mua-acc/${esc(a.code)}">🎲 Chọn acc này</a></div>`).join('')}</div>`:`<div class="empty"><div class="big">🎒</div><h2>Chưa có acc túi mù</h2><p>Admin sẽ cập nhật thêm acc sau.</p></div>`}<p style="margin-top:18px"><a href="#/acc">Xem tất cả danh mục acc →</a></p>`;
+    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Acc túi mù Blox</div><h1>Acc túi mù Blox</h1><p>Mỗi acc giá <b>${vnd(cat?.price ?? 50000)}</b>. Chọn acc đang có trong kho.</p></div>${B.accounts.length?`<div class="grid g3">${B.accounts.map(a=>`<div class="card bag"><img src="${esc(a.cover_url||'img/tui-mu-50k-cover.jpg')}" alt="${esc(a.name||'Acc túi mù Blox 50K')}" loading="lazy" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:12px"><div class="muted small">Mã: ${esc(a.code)}</div><h3>${esc(a.name)}</h3><div class="price" style="font-size:1.4rem">${vnd(accPrice(a))}</div><a class="btn btn-pu" href="#/mua-acc/${esc(a.code)}">🎲 Chọn acc này</a></div>`).join('')}</div>`:`<div class="empty"><div class="big">🎒</div><h2>Chưa có acc túi mù</h2><p>Admin sẽ cập nhật thêm acc sau.</p></div>`}<p style="margin-top:18px"><a href="#/acc">Xem tất cả danh mục acc →</a></p>`;
   };
 
   views["mua-acc"] = (p) => {
     const f = findAcc(p[0]);
-    if (!f) return `<div class="empty"><div class="big">🤔</div><h2>Không tìm thấy acc</h2><p><a href="#/acc">Xem acc tự chọn</a> · <a href="#/tui-mu">Xem acc túi mù</a></p></div>`;
+    if (!f) return `<div class="empty"><div class="big">🤔</div><h2>Không tìm thấy acc</h2><p><a href="#/acc">Xem acc Roblox tự chọn</a> · <a href="#/tui-mu">Xem acc túi mù</a></p></div>`;
     const { x, bag } = f, price = accPrice(x), category=AS.categories.find(c=>c.id===x.category_id), kind = category?.name || (bag ? "acc túi mù" : "acc");
     if (x.sold) return `<div class="empty"><div class="big">😢</div><h2>Acc này đã bán</h2><p><a href="${bag ? "#/tui-mu" : "#/acc"}">Chọn acc khác</a></p></div>`;
     const b = S.bank || {}, hasBank = b.bankCode && b.accountNo;
     const qr = hasBank ? `https://img.vietqr.io/image/${encodeURIComponent(b.bankCode)}-${encodeURIComponent(b.accountNo)}-compact2.png?amount=${price}&addInfo=${encodeURIComponent(x.code)}${b.accountName ? "&accountName=" + encodeURIComponent(b.accountName) : ""}` : "";
     const msg = `Mình muốn mua ${kind} mã ${x.code} (tên acc: ${x.name}) - giá ${vnd(price)}.`;
     return `
-    <div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / <a href="${bag ? "#/tui-mu" : "#/acc"}">${esc(category?.name || (bag ? "Acc túi mù" : "Acc tự chọn"))}</a> / ${esc(x.code)}</div><h1>Mua ${kind}</h1></div>
+    <div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / <a href="${bag ? "#/tui-mu" : "#/acc"}">${esc(category?.name || (bag ? "Acc túi mù Blox" : "Acc Roblox tự chọn"))}</a> / ${esc(x.code)}</div><h1>Mua ${kind}</h1></div>
     <div class="layout">
       <div class="card">
         ${x.cover_url?`<img src="${esc(x.cover_url)}" alt="${esc(x.name)}" style="width:100%;max-height:420px;object-fit:contain;border-radius:12px;margin-bottom:12px">`:''}${Array.isArray(x.gallery_urls)&&x.gallery_urls.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px">${x.gallery_urls.slice(0,30).map((u,i)=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Ảnh phụ ${i+1}" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px"></a>`).join('')}</div>`:''}
         <div class="buycode"><span class="muted small">MÃ ACC CỦA BẠN</span><b id="bcode">${esc(x.code)}</b>
           <button class="btn btn-g btn-s" data-copy="${esc(x.code)}">Sao chép mã</button></div>
-        <dl class="kv" style="margin-top:14px"><dt>Tên acc</dt><dd>${esc(x.name)}</dd><dt>Loại</dt><dd>${esc(category?.name || (bag ? "Acc túi mù" : "Acc tự chọn"))}</dd><dt>Giá</dt><dd><b class="price">${vnd(price)}</b></dd></dl>
+        <dl class="kv" style="margin-top:14px"><dt>Tên acc</dt><dd>${esc(x.name)}</dd><dt>Game</dt><dd>${esc(x.game||"—")}</dd><dt>Loại</dt><dd>${esc(category?.name || (bag ? "Acc túi mù Blox" : "Acc Roblox tự chọn"))}</dd><dt>Giá</dt><dd><b class="price">${vnd(price)}</b></dd></dl>
         <div class="buysteps">
           <div><b>Gửi mã acc cho admin</b>Nhắn mã <b>${esc(x.code)}</b> cho admin qua Zalo hoặc Facebook.
             <div class="row" style="margin-top:10px"><button class="btn btn-p btn-s" data-copy="${esc(msg)}">Sao chép tin nhắn</button>

@@ -231,19 +231,20 @@
 
       <div class="card">
         <h2>📤 Đăng acc vào kho</h2>
-        <p>Chọn danh mục; giá sẽ tự lấy theo danh mục. Thông tin đăng nhập được lưu riêng, không hiển thị cho tài khoản.</p>
+        <p>Chọn danh mục và nhập Game (bắt buộc với Acc Roblox tự chọn) để khách lọc theo game; giá sẽ tự lấy theo danh mục. Thông tin đăng nhập được lưu riêng, không hiển thị cho tài khoản.</p>
         <form id="accForm">
           <select id="accCategory" required style="min-width:240px">
             <option value="">Chọn danh mục</option>
           </select>
           <input id="accCode" placeholder="Mã acc (VD: VIP001) — để trống tự tạo">
+          <input id="accGame" list="gameList" placeholder="Game (VD: Blox Fruits, Steal An Egg)" autocomplete="off" style="min-width:260px"><datalist id="gameList"></datalist>
           <input id="accName" placeholder="Tên / tiêu đề acc" required>
-          <input id="accPrice" type="number" min="0" step="1000" placeholder="Giá riêng (chỉ Acc tự chọn)" hidden>
+          <input id="accPrice" type="number" min="0" step="1000" placeholder="Giá riêng (chỉ Acc Roblox tự chọn)" hidden>
           <input id="accLogin" placeholder="Thông tin đăng nhập (chỉ Admin xem)" required>
           <textarea id="accDetails" placeholder="Thông số công khai: level, trái, kiếm..." rows="3" style="width:min(100%,600px);vertical-align:middle"></textarea>
           <div id="accImageFields" hidden style="width:100%;padding:14px;border:1px solid var(--bd);border-radius:12px;margin:8px 0;background:rgba(0,0,0,0.25)">
             <b style="color:#fff">Ảnh cho acc</b>
-            <p class="muted small" style="margin:6px 0 12px">Acc tự chọn và Acc túi mù: chọn 1 ảnh bìa chính và tối đa 30 ảnh phụ. Acc túi mù sẽ dùng ảnh TÚI MÙ 50K mặc định nếu không tải ảnh riêng.</p>
+            <p class="muted small" style="margin:6px 0 12px">Acc Roblox tự chọn và Acc túi mù Blox: chọn 1 ảnh bìa chính và tối đa 30 ảnh phụ. Acc túi mù sẽ dùng ảnh TÚI MÙ 50K mặc định nếu không tải ảnh riêng.</p>
             <label for="accCoverImage" style="display:block;margin-bottom:4px">Ảnh chính làm bìa (không bắt buộc)</label>
             <input id="accCoverImage" type="file" accept="image/*" style="width:100%;margin-bottom:12px">
             <label for="accGalleryImages" style="display:block;margin-bottom:4px">Ảnh phụ (tối đa 30 ảnh)</label>
@@ -317,7 +318,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/supabase.js"></script>
-  <script src="js/admin.js?v=13"></script>
+  <script src="js/admin.js?v=14"></script>
   <script src="js/admin-payments.js?v=1"></script>
   <script>window.addEventListener("error",function(e){if(e.target&&e.target.tagName==="SCRIPT"){var m=document.getElementById("message");if(m)m.textContent="Không tải được tệp JavaScript: "+(e.target.src||"");}},true);</script>
 </body>

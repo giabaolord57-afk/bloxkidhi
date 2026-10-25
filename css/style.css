@@ -2129,3 +2129,28 @@ a.tk:active { transform: translateY(0) scale(.94); }
   #fx { display: none !important; }
   .hero-floor { animation: none; }
 }
+
+/* ---------- CHẾ ĐỘ NHẸ TRÊN ĐIỆN THOẠI: bớt hiệu ứng cho đỡ lag ----------
+   Giữ lại duy nhất dải danh mục chạy ngang. Máy tính giữ nguyên toàn bộ hiệu ứng. */
+@media (hover: none), (max-width: 980px) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: .12s !important;
+    filter: none !important;
+  }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  .ticker .ticker-track { animation: tick 45s linear infinite !important; }
+  .ticker:hover .ticker-track, .ticker:focus-within .ticker-track { animation-play-state: paused !important; }
+  #cursor-glow, #route-bar { display: none !important; }
+  a.tk:hover, a.tk:focus-visible { transform: none; }
+}
+
+/* ---------- Bộ lọc Acc Roblox tự chọn (game + giá) ---------- */
+.accfilter { display: grid; gap: 12px; margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--bd); border-radius: 14px; background: rgba(18, 24, 38, 0.6); }
+.accfilter-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.accfilter-lb { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tx2); min-width: 72px; }
+.accfilter button.tab { cursor: pointer; font-family: inherit; }
+.accsort { background: rgba(18, 24, 38, 0.9); color: var(--tx); border: 1px solid var(--bd); border-radius: 99px; padding: 9px 16px; font: inherit; font-size: 0.92rem; font-weight: 600; cursor: pointer; }
+.accsort:focus { outline: none; border-color: var(--ac); }
+.acc-game { display: inline-block; margin: 0 0 8px; padding: 3px 10px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; color: var(--ac); background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.3); }
+@media (max-width: 600px) { .accfilter-lb { min-width: 100%; } }
