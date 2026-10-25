@@ -102,8 +102,25 @@
 
   /* ---------- 3) HIỆN DẦN KHI CUỘN (SCROLL REVEAL BẬC THANG) ---------- */
   let observer;
+  // Lưới an toàn cho iPhone/Safari: nếu IntersectionObserver không báo kịp thì tự kiểm tra
+  // theo vị trí cuộn, để nội dung KHÔNG BAO GIỜ bị kẹt ở trạng thái ẩn (trống trơn).
+  function revealVisible() {
+    document.querySelectorAll(".reveal:not(.in-view)").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < innerHeight + 80 && r.bottom > -80) {
+        el.classList.add("in-view");
+        if (observer) observer.unobserve(el);
+      }
+    });
+  }
+  if (!reduce) {
+    ["scroll", "touchmove", "resize", "orientationchange"].forEach((ev) =>
+      window.addEventListener(ev, revealVisible, { passive: true }));
+    setInterval(revealVisible, 600);
+  }
   function initReveal(root) {
     if (reduce) return;
+    if (!("IntersectionObserver" in window)) return; // không hỗ trợ -> luôn hiện sẵn
     const elements = root.querySelectorAll(".card, .steps > div, .odds, .buycode, .buysteps > div, .order-progress, .tw");
     if (!observer) {
       observer = new IntersectionObserver((entries) => {
@@ -123,6 +140,7 @@
       el.style.transitionDelay = `${(index % 4) * 0.05}s`;
       observer.observe(el);
     });
+    setTimeout(revealVisible, 120);
   }
 
   // Tự động kích hoạt lại khi chuyển View / Route trong #app

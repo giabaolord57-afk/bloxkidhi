@@ -2045,3 +2045,87 @@ td.n, th.n {
 .bill-preview{margin-top:10px;padding:10px;border:1px solid var(--bd);border-radius:12px;background:rgba(127,145,170,.05);overflow-wrap:anywhere}
 .bill-preview p{margin:0 0 8px}
 .bill-preview-img{display:block;width:100%;max-width:320px;max-height:320px;object-fit:contain;border-radius:8px}
+
+
+/* ---------- TICKER DANH MỤC: bấm được + hiệu ứng động ---------- */
+.ticker::before {                      /* tia sáng chạy dọc viền trên */
+  content: "";
+  position: absolute; top: 0; left: 0; height: 2px; width: 28%;
+  background: linear-gradient(90deg, transparent, var(--ac), var(--pu), transparent);
+  filter: drop-shadow(0 0 6px var(--glow));
+  animation: tkSweep 3.2s linear infinite;
+  pointer-events: none; z-index: 2;
+}
+@keyframes tkSweep { from { transform: translateX(-100%); } to { transform: translateX(360%); } }
+
+a.tk {
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  color: var(--tx);
+  transition: transform .25s var(--ease-spring), background .25s, border-color .25s, box-shadow .25s;
+}
+a.tk .tk-n { font-weight: 600; }
+a.tk[data-k="boost"] { border-color: rgba(176, 38, 255, .22); }
+a.tk[data-k="boost"] b { color: #d8b4fe !important; text-shadow: 0 0 10px rgba(176, 38, 255, .45); }
+a.tk::after {                          /* vệt sáng quét ngang khi rê chuột */
+  content: "";
+  position: absolute; inset: 0 auto 0 -60%; width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .22), transparent);
+  transform: skewX(-20deg);
+  transition: none; pointer-events: none;
+}
+a.tk:hover, a.tk:focus-visible {
+  transform: translateY(-3px) scale(1.05);
+  background: rgba(0, 240, 255, .12);
+  border-color: var(--ac);
+  box-shadow: 0 6px 20px var(--glow-soft), 0 0 14px var(--glow-soft);
+  outline: none;
+}
+a.tk[data-k="boost"]:hover, a.tk[data-k="boost"]:focus-visible {
+  background: rgba(176, 38, 255, .14);
+  border-color: var(--pu);
+  box-shadow: 0 6px 20px rgba(176, 38, 255, .25), 0 0 14px rgba(176, 38, 255, .2);
+}
+a.tk:hover::after, a.tk:focus-visible::after { left: 130%; transition: left .6s ease; }
+a.tk:hover i, a.tk:focus-visible i { animation: tkWiggle .6s ease; }
+a.tk:active { transform: translateY(0) scale(.94); }
+@keyframes tkWiggle { 0%,100% { transform: rotate(0) scale(1); } 25% { transform: rotate(-14deg) scale(1.25); } 60% { transform: rotate(10deg) scale(1.2); } }
+
+.ticker:hover .ticker-track, .ticker:focus-within .ticker-track { animation-play-state: paused; }
+
+/* Dải danh mục luôn chạy liên tục, kể cả khi máy bật "giảm chuyển động" (chạy chậm hơn cho dịu mắt) */
+@media (prefers-reduced-motion: reduce) {
+  .ticker .ticker-track { animation: tick 70s linear infinite !important; }
+  .ticker:hover .ticker-track, .ticker:focus-within .ticker-track { animation-play-state: paused !important; }
+}
+
+
+/* ---------- ỔN ĐỊNH TRÊN ĐIỆN THOẠI (iPhone/Safari) ----------
+   Nhiều lớp làm mờ nền (backdrop-filter) + will-change khiến Safari iOS hết bộ nhớ đồ họa,
+   dẫn đến trang bị TRỐNG sau khi cuộn. Trên cảm ứng/màn hình nhỏ: bỏ làm mờ, dùng nền đặc hơn. */
+@media (hover: none), (max-width: 980px) {
+  *, *::before, *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .card { will-change: auto; background: linear-gradient(145deg, rgba(16, 23, 38, .95), rgba(11, 15, 26, .97)); }
+  .nav { background: rgba(7, 9, 14, .96); }
+  .ticker {
+    background: rgba(14, 18, 30, .95);
+    -webkit-mask-image: none; mask-image: none;
+  }
+  .ticker-track { -webkit-transform: translate3d(0, 0, 0); }
+  .reveal { transition-duration: .4s; }
+}
+
+/* iPhone đời cũ (vd iPhone 7 Plus, iOS 15): các lớp nền full-màn hình quá nặng -> làm nhẹ */
+@media (hover: none), (max-width: 980px) {
+  body::before {            /* hào quang nền: bỏ blur 80px, bỏ xoay/phóng to, bỏ lớp quá khổ */
+    inset: 0; filter: none; animation: none; will-change: auto;
+  }
+  body::after { -webkit-mask-image: none; mask-image: none; opacity: .5; }
+  #fx { display: none !important; }
+  .hero-floor { animation: none; }
+}

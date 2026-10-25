@@ -38,12 +38,18 @@
   const views = {};
 
   function ticker() {
-    const pool = [];
-    ITEM_GROUPS.forEach((g) => g.items.slice(0, 4).forEach((i) => pool.push([g.icon, i.name, i.base])));
-    BOOST.groups.forEach((g) => g.items.slice(0, 2).forEach((i) => pool.push([g.icon, i.name, i.base])));
-    const html = pool.map((x) => `<span class="tk"><i>${x[0]}</i>${esc(x[1].length > 34 ? x[1].slice(0, 32) + "…" : x[1])}<b>${vnd(sell(x[2]))}</b></span>`).join("");
-    // Two identical groups + translateX(-50%) create a seamless, continuous loop.
-    return `<div class="ticker" aria-hidden="true"><div class="ticker-track"><div class="ticker-group">${html}</div><div class="ticker-group">${html}</div></div></div>`;
+    // Mỗi ô là một danh mục: bấm vào sẽ chuyển thẳng sang mục đó.
+    const cats = [
+      ...ITEM_GROUPS.map((g) => ({ g, k: "item", href: `#/vat-pham/${g.id}` })),
+      ...BOOST.groups.map((g) => ({ g, k: "boost", href: g.id === "steal-an-egg" ? "#/steal-an-egg" : `#/cay-thue/${g.id}` })),
+    ];
+    const chip = (c, hidden) => {
+      const min = Math.min(...c.g.items.map((i) => sell(i.base)));
+      return `<a class="tk" data-k="${c.k}" href="${esc(c.href)}"${hidden ? ' tabindex="-1"' : ""}><i>${c.g.icon}</i><span class="tk-n">${esc(c.g.name)}</span><b>từ ${vnd(min)}</b></a>`;
+    };
+    const group = (hidden) => `<div class="ticker-group"${hidden ? ' aria-hidden="true"' : ""}>${cats.map((c) => chip(c, hidden)).join("")}</div>`;
+    // Hai nhóm giống hệt nhau + translateX(-50%) tạo vòng lặp liền mạch, chạy liên tục.
+    return `<div class="ticker" role="navigation" aria-label="Chọn nhanh danh mục"><div class="ticker-track">${group(false)}${group(true)}</div></div>`;
   }
 
   views.home = () => {
@@ -273,7 +279,7 @@ views["gio-hang"].after = () => {
     const feeRate = calc.rate, fee = calc.fee;
     const addCardRow = () => {
       const i = cardList.children.length;
-      const row = document.createElement('div'); row.className = 'card-entry';
+      const row = document.createElement('div'); row.className = 'card-entry bx-in';
       row.innerHTML = `<div class="card-entry-head"><b>Card #${i+1}</b><button type="button" class="x" data-remove-card aria-label="Xóa card">✕</button></div>
         <div class="field"><label class="f">Nhà mạng / loại thẻ *</label><select name="cardProvider_${i}"><option value="">-- Chọn loại thẻ --</option><option>Viettel</option><option>VinaPhone</option><option>MobiFone</option><option>Vietnamobile</option><option>Garena</option></select></div>
         <div class="field"><label class="f">Mệnh giá thẻ *</label><select name="cardDenomination_${i}"><option value="">-- Chọn mệnh giá --</option>${cardOptions.map(n=>`<option value="${n}">${vnd(n)}</option>`).join('')}</select></div>
@@ -307,15 +313,25 @@ views["gio-hang"].after = () => {
       if (discountRow) discountRow.hidden = !isCard;
       const roundRow = f.querySelector('#checkoutRoundRow'), roundEl = f.querySelector('#checkoutRound');
       const hintEl = f.querySelector('#cardHint');
-      if (roundRow) roundRow.hidden = !(isCard && calc.rounding !== 0);
+      if (roundRow) {
+        const showRound = isCard && calc.rounding !== 0, was = roundRow.hidden;
+        roundRow.hidden = !showRound; if (showRound && was) CP.replay(roundRow, 'bx-in');
+      }
       if (roundEl) roundEl.textContent = `${calc.rounding < 0 ? '−' : '+'}${vnd(Math.abs(calc.rounding))}`;
+      if (discountRow && isCard && discountRow._bxShown !== true) CP.replay(discountRow, 'bx-in');
+      if (discountRow) discountRow._bxShown = isCard;
       if (hintEl) {
         const parts = CP.groupCards(CP.suggestCards(calc.due)).map(g => `${g.count} × ${vnd(g.value)}`).join(' + ');
+        const enough = faceTotal >= calc.due, was = hintEl.hidden;
+        const html = `Cần nạp <b>${vnd(calc.due)}</b>. Gợi ý ít card nhất: <b>${parts}</b>.` + (faceTotal ? ` Đã chọn: ${vnd(faceTotal)}${enough ? ' ✓' : ` (thiếu ${vnd(calc.due - faceTotal)})`}.` : '');
         hintEl.hidden = !isCard;
-        hintEl.innerHTML = `Cần nạp <b>${vnd(calc.due)}</b>. Gợi ý ít card nhất: <b>${parts}</b>.` + (faceTotal ? ` Đã chọn: ${vnd(faceTotal)}${faceTotal < calc.due ? ` (thiếu ${vnd(calc.due - faceTotal)})` : ' ✓'}.` : '');
+        if (isCard && was) CP.replay(hintEl, 'bx-in');
+        if (hintEl.innerHTML !== html) { hintEl.innerHTML = html; if (!was) CP.replay(hintEl, 'bx-pulse'); }
+        if (isCard && enough && !hintEl._bxEnough) CP.replay(hintEl, 'bx-ok');
+        hintEl._bxEnough = enough;
       }
       if (checkoutTotalLabel) checkoutTotalLabel.textContent = 'Tổng thanh toán';
-      if (checkoutTotal) checkoutTotal.textContent = vnd(isCard ? calc.due : total);
+      if (checkoutTotal) CP.animateNumber(checkoutTotal, isCard ? calc.due : total, vnd);
       const bill = $('#paymentBill'); if(bill) bill.required = false;
     };
     const billInput = $('#paymentBill');
@@ -666,6 +682,8 @@ views["gio-hang"].after = () => {
   // hạt sáng bay nền
   (function particles() {
     if (reduce) return;
+    // Điện thoại/cảm ứng (iPhone cũ dễ hết bộ nhớ đồ họa): không vẽ canvas hạt sáng nền.
+    if (window.matchMedia && matchMedia("(hover: none)").matches) return;
     const cv = document.createElement("canvas"); cv.id = "fx"; document.body.prepend(cv);
     const cx = cv.getContext("2d"); let W, H, P = [];
     const cols = ["34,225,255", "99,102,241", "168,85,247"];

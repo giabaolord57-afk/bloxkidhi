@@ -69,10 +69,68 @@
       .map(function (v) { return { value: v, count: map[v] }; });
   }
 
+  /* ---------- Hiệu ứng chuyển động cho phần thanh toán thẻ cào ---------- */
+  var FX_CSS =
+    "@keyframes bxIn{from{opacity:0;transform:translateY(-10px) scale(.98)}to{opacity:1;transform:none}}" +
+    "@keyframes bxPulse{0%{box-shadow:0 0 0 0 rgba(0,240,255,.55)}100%{box-shadow:0 0 0 14px rgba(0,240,255,0)}}" +
+    "@keyframes bxFlash{0%{text-shadow:0 0 0 rgba(0,240,255,0);transform:scale(1)}35%{text-shadow:0 0 18px rgba(0,240,255,.9);transform:scale(1.12)}100%{text-shadow:0 0 0 rgba(0,240,255,0);transform:scale(1)}}" +
+    "@keyframes bxOk{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6)}100%{box-shadow:0 0 0 16px rgba(16,185,129,0)}}" +
+    ".bx-in{animation:bxIn .45s cubic-bezier(.16,1,.3,1) both}" +
+    ".bx-pulse{animation:bxPulse .7s ease-out}" +
+    ".bx-flash{display:inline-block;transform-origin:right center;animation:bxFlash .6s ease-out}" +
+    ".bx-ok{animation:bxOk .8s ease-out;border-color:rgba(16,185,129,.7)!important}" +
+    "#cardHint{transition:border-color .3s,background-color .3s}" +
+    "@media (prefers-reduced-motion:reduce){.bx-in,.bx-pulse,.bx-flash,.bx-ok{animation:none!important}}";
+
+  function reducedMotion() {
+    return typeof window !== "undefined" && window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function injectStyles() {
+    if (typeof document === "undefined" || document.getElementById("bx-cardpay-fx")) return;
+    var st = document.createElement("style");
+    st.id = "bx-cardpay-fx";
+    st.textContent = FX_CSS;
+    document.head.appendChild(st);
+  }
+
+  /** Chạy lại 1 class animation trên phần tử (kể cả khi đã có class đó). */
+  function replay(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth; // ép reflow để animation chạy lại
+    el.classList.add(cls);
+  }
+
+  /** Đếm số chạy từ giá trị cũ đến giá trị mới, kèm hiệu ứng sáng lên. */
+  function animateNumber(el, to, format) {
+    if (!el) return;
+    var from = typeof el._bxVal === "number" ? el._bxVal : to;
+    el._bxVal = to;
+    if (el._bxRaf) cancelAnimationFrame(el._bxRaf);
+    if (from === to || reducedMotion() || typeof requestAnimationFrame === "undefined") {
+      el.textContent = format(to);
+      return;
+    }
+    var t0 = null, dur = 550;
+    replay(el, "bx-flash");
+    (function frame(t) {
+      if (t0 === null) t0 = t;
+      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = format(Math.round(from + (to - from) * e));
+      if (k < 1) el._bxRaf = requestAnimationFrame(frame);
+      else el.textContent = format(to);
+    })(performance.now());
+  }
+
+  injectStyles();
+
   var api = {
     DENOMINATIONS: DENOMINATIONS, STEP: STEP,
     feeRateFor: feeRateFor, roundDownToCard: roundDownToCard, roundForCards: roundForCards, MAX_ROUND_UP: MAX_ROUND_UP,
-    cardDue: cardDue, suggestCards: suggestCards, groupCards: groupCards
+    cardDue: cardDue, suggestCards: suggestCards, groupCards: groupCards,
+    animateNumber: animateNumber, replay: replay
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.BXCardPay = api;
