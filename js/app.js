@@ -241,7 +241,7 @@
           <p class="muted small">Sau khi tạo đơn, chuyển đúng số tiền với nội dung là mã đơn. Bạn có thể tải ảnh/PDF biên lai ở mục gửi bill bên dưới.</p></section>
         <section id="cardPayFields" class="pay-extra" hidden>
           <h4>🎟️ Thanh toán bằng thẻ cào</h4>
-          <p class="muted small">Thêm một hoặc nhiều thẻ. Phí chiết khấu được cộng theo giá gốc đơn hàng, tổng được làm tròn xuống bội số 10.000đ (shop chịu phần lẻ).</p>
+          <p class="muted small">Thêm một hoặc nhiều thẻ. Phí chiết khấu được cộng theo giá gốc đơn hàng, tổng được làm tròn theo mệnh giá card (thường xuống bội số 10.000đ; gần card lớn thì lên cho gọn).</p>
           <p class="note" id="cardHint" hidden></p>
           <div id="cardList" class="card-list"></div>
           <button type="button" class="btn btn-s" id="addCardBtn">＋ Thêm card</button>
