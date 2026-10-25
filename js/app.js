@@ -297,7 +297,7 @@
       const net = amounts.reduce((sum, amount) => sum + amount - Math.round(amount * feeRateFor(amount)), 0);
       // Update the exact summary elements by their IDs inside the card payment section.
       const summaryValue = (id, value) => {
-        const el = cardFields.querySelector(`[id="${id}"]`);
+        const el = document.getElementById(id);
         if (el) el.textContent = value;
       };
       summaryValue('cardOriginalTotal', vnd(total));
@@ -333,6 +333,7 @@
     });
     addCardBtn.addEventListener('click', addCardRow);
     cardList.addEventListener('change', updatePaymentFields);
+    cardList.addEventListener('change', () => requestAnimationFrame(updatePaymentFields));
     cardList.addEventListener('input', updatePaymentFields);
     cardList.addEventListener('click', e => { const btn=e.target.closest('[data-remove-card]'); if(btn && cardList.children.length>1){btn.closest('.card-entry').remove(); updatePaymentFields();} });
     f.querySelectorAll('input[name="paymentMethod"]').forEach(el=>el.addEventListener('change', updatePaymentFields));
