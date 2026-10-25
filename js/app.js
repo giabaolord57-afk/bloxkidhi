@@ -241,7 +241,8 @@
           <p class="muted small">Sau khi tạo đơn, chuyển đúng số tiền với nội dung là mã đơn. Bạn có thể tải ảnh/PDF biên lai ở mục gửi bill bên dưới.</p></section>
         <section id="cardPayFields" class="pay-extra" hidden>
           <h4>🎟️ Thanh toán bằng thẻ cào</h4>
-          <p class="muted small">Thêm một hoặc nhiều thẻ. Phí chiết khấu được cộng theo giá gốc đơn hàng.</p>
+          <p class="muted small">Thêm một hoặc nhiều thẻ. Phí chiết khấu được cộng theo giá gốc đơn hàng, tổng được làm tròn xuống bội số 10.000đ (shop chịu phần lẻ).</p>
+          <p class="note" id="cardHint" hidden></p>
           <div id="cardList" class="card-list"></div>
           <button type="button" class="btn btn-s" id="addCardBtn">＋ Thêm card</button>
           <p class="muted small">Phí theo giá đơn: đến 100.000đ: 20%; trên 100.000đ đến 200.000đ: 15%; trên 200.000đ: 12%. Admin kiểm tra thẻ thủ công.</p>
@@ -250,6 +251,7 @@
         <div class="field"><label class="f">Ghi chú</label><textarea name="note" rows="2" placeholder="Yêu cầu thêm (không ghi mật khẩu vào đây)"></textarea></div>
         <div class="sum"><span>Giá gốc</span><span id="checkoutOriginal">${vnd(total)}</span></div>
         <div class="sum" id="checkoutDiscountRow" hidden><span>Phí chiết khấu</span><span id="checkoutDiscount">0đ</span></div>
+        <div class="sum" id="checkoutRoundRow" hidden><span>Làm tròn theo mệnh giá card</span><span id="checkoutRound">0đ</span></div>
         <div class="sum t"><span id="checkoutTotalLabel">Tổng thanh toán</span><span class="price" id="checkoutTotal">${vnd(total)}</span></div>
         <button class="btn btn-p" style="width:100%;margin-top:14px">Đặt hàng</button>
         <p class="muted small" style="margin-top:10px">${needPass ? "🔒 Chỉ cung cấp mật khẩu nếu bạn đồng ý để shop đăng nhập thực hiện đơn. Đổi mật khẩu ngay sau khi hoàn tất; không dùng lại mật khẩu ở dịch vụ khác." : "Đơn này không yêu cầu mật khẩu Roblox."}</p>
@@ -264,10 +266,11 @@ views["gio-hang"].after = () => {
     );
     const cardFields = $('#cardPayFields'), bankFields = $('#bankPayFields');
     const cardList = $('#cardList'), addCardBtn = $('#addCardBtn');
-    const cardOptions = [10000,20000,30000,50000,100000,200000,300000,500000];
-    const feeRateFor = amount => amount <= 100000 ? .20 : amount <= 200000 ? .15 : .12;
-    const feeRate = feeRateFor(total);
-    const fee = Math.round(total * feeRate);
+    const CP = window.BXCardPay;
+    const cardOptions = CP.DENOMINATIONS;
+    const feeRateFor = CP.feeRateFor;
+    const calc = CP.cardDue(total);          // phí + tổng đã làm tròn xuống theo card
+    const feeRate = calc.rate, fee = calc.fee;
     const addCardRow = () => {
       const i = cardList.children.length;
       const row = document.createElement('div'); row.className = 'card-entry';
@@ -302,8 +305,17 @@ views["gio-hang"].after = () => {
       if (checkoutOriginal) checkoutOriginal.textContent = vnd(total);
       if (checkoutDiscount) checkoutDiscount.textContent = `+${vnd(fee)} (${Math.round(feeRate*100)}%)`;
       if (discountRow) discountRow.hidden = !isCard;
+      const roundRow = f.querySelector('#checkoutRoundRow'), roundEl = f.querySelector('#checkoutRound');
+      const hintEl = f.querySelector('#cardHint');
+      if (roundRow) roundRow.hidden = !(isCard && calc.rounding !== 0);
+      if (roundEl) roundEl.textContent = `${calc.rounding < 0 ? '−' : '+'}${vnd(Math.abs(calc.rounding))}`;
+      if (hintEl) {
+        const parts = CP.groupCards(CP.suggestCards(calc.due)).map(g => `${g.count} × ${vnd(g.value)}`).join(' + ');
+        hintEl.hidden = !isCard;
+        hintEl.innerHTML = `Cần nạp <b>${vnd(calc.due)}</b>. Gợi ý ít card nhất: <b>${parts}</b>.` + (faceTotal ? ` Đã chọn: ${vnd(faceTotal)}${faceTotal < calc.due ? ` (thiếu ${vnd(calc.due - faceTotal)})` : ' ✓'}.` : '');
+      }
       if (checkoutTotalLabel) checkoutTotalLabel.textContent = 'Tổng thanh toán';
-      if (checkoutTotal) checkoutTotal.textContent = vnd(isCard ? total + fee : total);
+      if (checkoutTotal) checkoutTotal.textContent = vnd(isCard ? calc.due : total);
       const bill = $('#paymentBill'); if(bill) bill.required = false;
     };
     const billInput = $('#paymentBill');
@@ -369,7 +381,7 @@ views["gio-hang"].after = () => {
             if(!provider || !denomination || !code || !serial) throw new Error('Vui lòng nhập đủ nhà mạng, mệnh giá, mã thẻ và serial cho từng card.');
             return {order_code:o.code,user_id:authUser.id,method:'card',status:'Chờ kiểm tra',bill_path:billPath,card_provider:provider,card_denomination:denomination,card_code:code,card_serial:serial,card_fee_percent:Math.round(feeRate*100),notes:(d.note||'').trim()||null};
           }) : [{order_code:o.code,user_id:authUser.id,method:o.paymentMethod,status:'Chờ kiểm tra',bill_path:billPath,card_provider:null,card_denomination:null,card_code:null,card_serial:null,card_fee_percent:null,notes:(d.note||'').trim()||null}];
-          if(isCard){ const face=cardRows.reduce((sum,r)=>sum+r.card_denomination,0); const due=Number(o.total)+Math.round(Number(o.total)*feeRateFor(Number(o.total))); if(face < due) throw new Error(`Tổng mệnh giá thẻ ${vnd(face)}, cần ${vnd(due)}, còn thiếu ${vnd(due-face)}. Hãy thêm card.`); }
+          if(isCard){ const face=cardRows.reduce((sum,r)=>sum+r.card_denomination,0); const due=CP.cardDue(Number(o.total)).due; if(face < due) throw new Error(`Tổng mệnh giá thẻ ${vnd(face)}, cần ${vnd(due)}, còn thiếu ${vnd(due-face)}. Hãy thêm card.`); }
           const {error:subError} = await db.from('payment_submissions').insert(cardRows);
           if(subError) throw new Error('Đơn đã tạo nhưng chưa gửi được thông tin thanh toán: '+subError.message+'. Hãy gửi mã đơn cho admin.');
           o.paymentMethod = d.paymentMethod || 'bank'; o.billPath=billPath;
