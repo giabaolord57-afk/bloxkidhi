@@ -310,8 +310,18 @@
       <div class="card" style="margin-top:18px">
         <h2>💳 Bill chuyển khoản & thẻ cào</h2>
         <p class="muted small">Kiểm tra ảnh/PDF biên lai hoặc thông tin thẻ. Chỉ xác nhận khi đã đối soát thanh toán thật.</p>
-        <div class="toolbar"><button class="btn btn-g btn-s" id="refreshPayments">Làm mới thanh toán</button><span id="paymentMessage" class="muted small"></span></div>
-        <div class="scroll"><table><thead><tr><th>Mã đơn</th><th>Phương thức</th><th>Chi tiết thẻ</th><th>Bill</th><th>Trạng thái</th><th>Ghi chú Admin</th><th>Thao tác</th></tr></thead><tbody id="paymentSubmissions"><tr><td colspan="7">Đang tải...</td></tr></tbody></table></div>
+        <div class="toolbar" style="margin-top:0">
+          <button class="btn btn-g btn-s" id="refreshPayments">Làm mới thanh toán</button>
+          <label style="display:inline-flex;align-items:center;gap:8px"><input type="checkbox" id="showPayDone" style="width:auto;margin:0"> Hiện cả đã xác nhận/từ chối</label>
+          <label style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" id="showPayArchived" style="width:auto"> Xem bill đã dọn</label>
+          <label style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" id="selectAllPay" style="width:auto"> Chọn tất cả đang hiển thị</label>
+          <span id="paySelectedCount" class="muted small">Đã chọn 0 bill</span>
+          <button class="btn btn-p btn-s" id="archivePaySelected" disabled>Dọn bill đã chọn</button>
+          <button class="btn btn-g btn-s" id="restorePaySelected" disabled>Khôi phục bill đã chọn</button>
+        </div>
+        <p id="paymentMessage" class="muted small"></p>
+        <p id="payCounts" class="muted small"></p>
+        <div class="scroll"><table><thead><tr><th>Chọn</th><th>Mã đơn</th><th>Phương thức</th><th>Chi tiết thẻ</th><th>Bill (link 24 giờ)</th><th>Trạng thái</th><th>Ghi chú Admin</th><th>Thao tác</th></tr></thead><tbody id="paymentSubmissions"><tr><td colspan="8">Đang tải...</td></tr></tbody></table></div>
       </div>
     </section>
   </main>
@@ -319,7 +329,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/supabase.js"></script>
   <script src="js/admin.js?v=18"></script>
-  <script src="js/admin-payments.js?v=1"></script>
+  <script src="js/admin-payments.js?v=2"></script>
   <script>window.addEventListener("error",function(e){if(e.target&&e.target.tagName==="SCRIPT"){var m=document.getElementById("message");if(m)m.textContent="Không tải được tệp JavaScript: "+(e.target.src||"");}},true);</script>
 </body>
 </html>
