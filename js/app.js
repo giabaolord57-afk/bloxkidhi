@@ -23,6 +23,17 @@
     const t = $("#toast"); t.textContent = msg; t.classList.add("show");
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200);
   }
+
+  function showLoginRequired() {
+    if (document.getElementById("loginReqModal")) return;
+    const m = document.createElement("div"); m.id = "loginReqModal"; m.className = "loginreq-overlay";
+    m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true");
+    m.innerHTML = `<div class="loginreq-box"><img class="loginreq-logo" src="img/logo.png" alt="BDShopVN"><h3>Bạn cần đăng nhập để thanh toán</h3>
+      <p class="muted">Vui lòng đăng nhập (hoặc tạo tài khoản) để đặt hàng và lưu đơn vào lịch sử tài khoản.</p>
+      <div class="loginreq-actions"><a class="btn btn-p" href="tai-khoan.html">Đăng nhập ngay</a><button type="button" class="btn btn-g" data-loginreq-close>Để sau</button></div></div>`;
+    m.addEventListener("click", (e) => { if (e.target === m || e.target.closest("[data-loginreq-close]")) m.remove(); });
+    document.body.appendChild(m);
+  }
   function updateBadge() {
     const n = getCart().reduce((a, l) => a + l.qty, 0), b = $("#cartCount");
     b.textContent = n; b.classList.toggle("zero", n === 0);
@@ -356,14 +367,16 @@ views["gio-hang"].after = () => {
     cardList.addEventListener('click', e => { const btn=e.target.closest('[data-remove-card]'); if(btn && cardList.children.length>1){btn.closest('.card-entry').remove(); updatePaymentFields();} });
     f.querySelectorAll('input[name="paymentMethod"]').forEach(el=>el.addEventListener('change', updatePaymentFields));
     addCardRow();
+    let loggedIn = null;
+    db.auth.getUser().then(({data}) => { loggedIn = !!(data && data.user); }).catch(() => {});
+    f.querySelector('button.btn-p').addEventListener('click', (e) => { if (loggedIn === false) { e.preventDefault(); showLoginRequired(); } });
     f.addEventListener("submit", async (e) => {
       e.preventDefault(); const btn=f.querySelector('button[type="submit"], button.btn-p'); btn.disabled=true;
       try {
         const {data:{user},error:authError}=await db.auth.getUser();
         if(authError) throw authError;
         if(!user){
-          toast('Vui lòng đăng nhập trước khi đặt hàng để lưu đơn vào lịch sử tài khoản.');
-          location.href='tai-khoan.html';
+          showLoginRequired();
           return;
         }
         const formData = new FormData(f); const d=Object.fromEntries(formData); const c=getCart();

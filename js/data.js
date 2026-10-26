@@ -168,7 +168,7 @@ window.BOOST = {
     {
       id: "level", name: "Cày Level", icon: "⚔️",
       items: [
-        { id: "ct-1", name: "1000 Level", base: 20000 },
+        { id: "ct-1", name: "1500 Level", base: 20000 },
         { id: "ct-2", name: "2800 Level ( MAX )", base: 40000 },
       ],
     },
