@@ -34,6 +34,17 @@
     m.addEventListener("click", (e) => { if (e.target === m || e.target.closest("[data-loginreq-close]")) m.remove(); });
     document.body.appendChild(m);
   }
+  function showWelcomeNotice() {
+    if (document.getElementById("welcomeModal")) return;
+    const m = document.createElement("div"); m.id = "welcomeModal"; m.className = "loginreq-overlay";
+    m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true");
+    m.innerHTML = `<div class="welcome-box"><img class="welcome-img" src="img/welcome-notice.webp" alt="Thông báo quan trọng BDShopVN"><button type="button" class="welcome-ack" data-welcome-close><span aria-hidden="true">✓</span> ĐÃ RÕ</button></div>`;
+    const close = () => { m.remove(); document.removeEventListener("keydown", onKey); };
+    const onKey = (e) => { if (e.key === "Escape") close(); };
+    m.addEventListener("click", (e) => { if (e.target.closest("[data-welcome-close]")) close(); });
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(m);
+  }
   function updateBadge() {
     const n = getCart().reduce((a, l) => a + l.qty, 0), b = $("#cartCount");
     b.textContent = n; b.classList.toggle("zero", n === 0);
@@ -786,5 +797,5 @@ views["gio-hang"].after = () => {
   document.title = S.name + " - Shop Blox Fruits uy tín";
   $("#footTag").textContent = S.tagline;
   $("#fZalo").href = S.contact.zalo; $("#fFb").href = S.contact.facebook; $("#yr").textContent = new Date().getFullYear();
-  updateBadge(); refreshAccData().finally(route);
+  updateBadge(); refreshAccData().finally(route); showWelcomeNotice();
 })();
