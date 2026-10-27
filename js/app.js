@@ -28,7 +28,7 @@
     if (document.getElementById("loginReqModal")) return;
     const m = document.createElement("div"); m.id = "loginReqModal"; m.className = "loginreq-overlay";
     m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true");
-    m.innerHTML = `<div class="loginreq-box"><img class="loginreq-logo" src="img/logo.png" alt="BDShopVN"><h3>Bạn cần đăng nhập để thanh toán</h3>
+    m.innerHTML = `<div class="loginreq-box"><img class="loginreq-banner" src="img/login-reminder.webp" alt="Nhắc nhở đăng nhập BDShopVN">
       <p class="muted">Vui lòng đăng nhập (hoặc tạo tài khoản) để đặt hàng và lưu đơn vào lịch sử tài khoản.</p>
       <div class="loginreq-actions"><a class="btn btn-p" href="tai-khoan.html">Đăng nhập ngay</a><button type="button" class="btn btn-g" data-loginreq-close>Để sau</button></div></div>`;
     m.addEventListener("click", (e) => { if (e.target === m || e.target.closest("[data-loginreq-close]")) m.remove(); });
@@ -40,8 +40,11 @@
   }
   function addToCart(line) {
     const c = getCart(), ex = c.find((l) => l.key === line.key);
-    if (ex) { ex.qty += 1; }
-    else c.push({ ...line, qty: 1 });
+    if (ex) {
+      // Robux và dịch vụ cày thuê tính theo gói/ngày đã chọn, không có số lượng mua thêm.
+      if (ex.type === "boost" || ex.group === "robux-120h") ex.qty = 1;
+      else ex.qty += 1;
+    } else c.push({ ...line, qty: 1 });
     setCart(c); toast("Đã thêm vào giỏ: " + line.name);
   }
 
@@ -236,7 +239,7 @@
     <div class="layout">
       <div class="card">${c.map((l) => `
         <div class="line"><div class="nm"><b>${esc(l.name)}</b><span>${esc(l.cat)} • ${vnd(l.unit)}</span></div>
-          <div class="qty"><button data-q="${esc(l.key)}|-1">−</button><b>${l.qty}</b><button data-q="${esc(l.key)}|1">+</button></div>
+          ${l.type === "boost" || l.group === "robux-120h" ? "" : `<div class="qty"><button data-q="${esc(l.key)}|-1">−</button><b>${l.qty}</b><button data-q="${esc(l.key)}|1">+</button></div>`}
           <b style="min-width:92px;text-align:right">${vnd(l.unit * l.qty)}</b>
           <button class="x" data-rm="${esc(l.key)}" aria-label="Xoá">✕</button></div>`).join("")}
       </div>
@@ -700,7 +703,7 @@ views["gio-hang"].after = () => {
       return;
     }
     const q = e.target.closest("[data-q]");
-    if (q) { const raw = q.dataset.q, sep = raw.lastIndexOf("|"), k = raw.slice(0, sep), d = Number(raw.slice(sep + 1)); let c = getCart(); const l = c.find((x) => x.key === k); if (l) { l.qty += +d; if (l.qty < 1) c = c.filter((x) => x !== l); setCart(c); route(); } return; }
+    if (q) { const raw = q.dataset.q, sep = raw.lastIndexOf("|"), k = raw.slice(0, sep), d = Number(raw.slice(sep + 1)); let c = getCart(); const l = c.find((x) => x.key === k); if (l && l.type !== "boost" && l.group !== "robux-120h") { l.qty += +d; if (l.qty < 1) c = c.filter((x) => x !== l); setCart(c); route(); } return; }
     const rm = e.target.closest("[data-rm]");
     if (rm) { setCart(getCart().filter((x) => x.key !== rm.dataset.rm)); route(); }
   });
