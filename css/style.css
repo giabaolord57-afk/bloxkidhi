@@ -2169,3 +2169,12 @@ a.tk:active { transform: translateY(0) scale(.94); }
 .welcome-ack:hover { filter: brightness(1.15); transform: translateY(-1px); }
 .welcome-ack:active { transform: scale(.98); }
 @media (max-width: 600px) { .welcome-box { max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); padding: 7px; gap: 8px; border-radius: 15px; } .welcome-img { max-height: 58vh; border-radius: 9px; } .welcome-ack { min-width: 140px; padding: 10px 22px; font-size: 15px; } }
+
+/* ---------- ICON ROBUX (ảnh thay cho 💎) ---------- */
+.ico-img { display: inline-block; vertical-align: -0.2em; object-fit: contain; }
+.tk i .ico-img { width: 1.1rem; height: auto; vertical-align: middle; }
+.tab .ico-img { width: 16px; height: auto; vertical-align: -3px; }
+.links a .ico-nav { width: 14px; height: auto; margin-right: 6px; vertical-align: -2px; }
+.cat .ico .ico-img { width: 2.1rem; height: auto; vertical-align: top; }
+.ico-h1 { width: 0.9em; height: auto; vertical-align: -0.08em; margin-right: 6px; }
+.prod .fimg img[src$="robux.png"] { width: 92px; height: 100px; }

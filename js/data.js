@@ -29,22 +29,27 @@ window.SHOP = {
   },
 };
 
-/* ---------- 1) VẬT PHẨM BLOX FRUITS ---------- */
-window.ITEM_GROUPS = [
+/* ---------- 0) ROBUX (mục riêng, không nằm trong Vật phẩm) ---------- */
+window.ROBUX_GROUPS = [
   {
     id: "robux-120h",
     name: "Robux 120H",
-    icon: "💎",
+    icon: "",
+    iconImg: "img/robux.png",
     desc: "Robux giao sau 120 giờ — an toàn, không cần mật khẩu. Cần Roblox username.",
     needs: "username",
     items: [
-      { id: "rb-400",   name: "400 Robux",   base: 80000 },
-      { id: "rb-800",   name: "800 Robux",   base: 155000 },
-      { id: "rb-1700",  name: "1.700 Robux", base: 320000 },
-      { id: "rb-4500",  name: "4.500 Robux", base: 810000 },
-      { id: "rb-10000", name: "10.000 Robux", base: 1750000 },
+      { id: "rb-400",   name: "400 Robux",   img: "img/robux.png", base: 80000 },
+      { id: "rb-800",   name: "800 Robux",   img: "img/robux.png", base: 155000 },
+      { id: "rb-1700",  name: "1.700 Robux", img: "img/robux.png", base: 320000 },
+      { id: "rb-4500",  name: "4.500 Robux", img: "img/robux.png", base: 810000 },
+      { id: "rb-10000", name: "10.000 Robux", img: "img/robux.png", base: 1750000 },
     ],
   },
+];
+
+/* ---------- 1) VẬT PHẨM BLOX FRUITS ---------- */
+window.ITEM_GROUPS = [
   {
     id: "trai-vinh-vien",
     name: "Trái Ác Quỷ Vĩnh Viễn",

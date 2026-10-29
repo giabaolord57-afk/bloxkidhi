@@ -6,6 +6,10 @@
 
   /* ---------- helpers ---------- */
   const sell = (base) => base + MK;
+  // Robux là mục riêng; ITEMS_ALL dùng để tra cứu giỏ hàng/bảng giá (giữ nguyên mã đơn item|robux-120h|...).
+  const ROBUX = window.ROBUX_GROUPS || [];
+  const ITEMS_ALL = [...ROBUX, ...ITEM_GROUPS];
+  const gIcon = (g) => g.iconImg ? `<img class="ico-img" src="${esc(g.iconImg)}" alt="" width="22" height="24" decoding="async">` : g.icon;
   const vnd = (n) => n.toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + "đ";
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const store = {
@@ -65,12 +69,13 @@
   function ticker() {
     // Mỗi ô là một danh mục: bấm vào sẽ chuyển thẳng sang mục đó.
     const cats = [
+      ...ROBUX.map((g) => ({ g, k: "item", href: "#/robux" })),
       ...ITEM_GROUPS.map((g) => ({ g, k: "item", href: `#/vat-pham/${g.id}` })),
       ...BOOST.groups.map((g) => ({ g, k: "boost", href: g.id === "steal-an-egg" ? "#/steal-an-egg" : `#/cay-thue/${g.id}` })),
     ];
     const chip = (c, hidden) => {
       const min = Math.min(...c.g.items.map((i) => sell(i.base)));
-      return `<a class="tk" data-k="${c.k}" href="${esc(c.href)}"${hidden ? ' tabindex="-1"' : ""}><i>${c.g.icon}</i><span class="tk-n">${esc(c.g.name)}</span><b>từ ${vnd(min)}</b></a>`;
+      return `<a class="tk" data-k="${c.k}" href="${esc(c.href)}"${hidden ? ' tabindex="-1"' : ""}><i>${gIcon(c.g)}</i><span class="tk-n">${esc(c.g.name)}</span><b>từ ${vnd(min)}</b></a>`;
     };
     const group = (hidden) => `<div class="ticker-group"${hidden ? ' aria-hidden="true"' : ""}>${cats.map((c) => chip(c, hidden)).join("")}</div>`;
     // Hai nhóm giống hệt nhau + translateX(-50%) tạo vòng lặp liền mạch, chạy liên tục.
@@ -78,10 +83,10 @@
   }
 
   views.home = () => {
-    const nItem = ITEM_GROUPS.reduce((a, g) => a + g.items.length, 0);
+    const nItem = ITEMS_ALL.reduce((a, g) => a + g.items.length, 0);
     const nBoost = BOOST.groups.reduce((a, g) => a + g.items.length, 0);
     const feat = [
-      ...ITEM_GROUPS.flatMap((g) => g.items.filter((i) => i.tag).map((i) => ({ t: "item", g, i }))),
+      ...ITEMS_ALL.flatMap((g) => g.items.filter((i) => i.tag).map((i) => ({ t: "item", g, i }))),
       ...BOOST.groups.flatMap((g) => g.items.filter((i) => i.tag).map((i) => ({ t: "boost", g, i }))),
     ].slice(0, 6);
     return `
@@ -95,7 +100,7 @@
           <div class="row"><a class="btn btn-p" href="#/cay-thue">⚔️ Cày thuê ngay</a><a class="btn btn-g" href="#/vat-pham">Xem vật phẩm</a></div>
           <div class="hero-stats">
             <div><b data-count="${nItem + nBoost}">0</b><span>Dịch vụ & vật phẩm</span></div>
-            <div><b data-count="${ITEM_GROUPS.length + BOOST.groups.length}">0</b><span>Nhóm dịch vụ</span></div>
+            <div><b data-count="${ITEMS_ALL.length + BOOST.groups.length}">0</b><span>Nhóm dịch vụ</span></div>
             <div><b>24/7</b><span>Hỗ trợ Zalo</span></div>
           </div>
         </div>
@@ -106,7 +111,8 @@
 
     <div class="sec-h"><div><h2>Danh mục</h2><p class="muted small">Chọn dịch vụ bạn cần</p></div></div>
     <div class="grid g3">
-      <a class="card hv cat" href="#/vat-pham"><span class="ico">💎</span><h3>Vật phẩm Blox Fruits</h3><p>Robux 120H, trái ác quỷ vĩnh viễn, trái rương, gamepass.</p><span class="go">Xem vật phẩm →</span></a>
+      <a class="card hv cat" href="#/robux"><span class="ico"><img class="ico-img" src="img/robux.png" alt="" width="40" height="44" decoding="async"></span><h3>Robux 120H</h3><p>Robux giao sau 120 giờ — an toàn, không cần mật khẩu, chỉ cần Roblox username.</p><span class="go">Mua Robux →</span></a>
+      <a class="card hv cat" href="#/vat-pham"><span class="ico">🍎</span><h3>Vật phẩm Blox Fruits</h3><p>Trái ác quỷ vĩnh viễn, trái rương, gamepass.</p><span class="go">Xem vật phẩm →</span></a>
       <a class="card hv cat" href="#/cay-thue"><span class="ico">⚔️</span><h3>Cày thuê Blox Fruits</h3><p>Level, Sea, Race V4, CDK, Godhuman, Mastery, Beli…</p><span class="go">Xem bảng giá →</span></a>
       <a class="card hv cat" href="#/steal-an-egg"><span class="ico">🥚</span><h3>Steal An Egg</h3><p>Cày thuê Steal An Egg theo ngày (25k/ngày), auto sự kiện, chạy bộ, cướp trứng, upgrade...</p><span class="go">Xem dịch vụ →</span></a>
       <a class="card hv cat" href="#/acc"><span class="ico">🎮</span><h3>Acc Roblox tự chọn</h3><p>Lọc theo game (Blox Fruits, Steal An Egg…), sắp xếp theo giá, xem thông số. Gửi mã acc cho admin rồi thanh toán để nhận mật khẩu.</p><span class="go">Chọn acc →</span></a>
@@ -171,14 +177,25 @@
 
   const searchBox = `<div class="search"><span>🔍</span><input type="search" id="q" placeholder="Tìm nhanh dịch vụ, tên trái…" autocomplete="off"></div>`;
 
+  // Robux: trang riêng, tách khỏi Vật phẩm.
+  views.robux = () => {
+    const g = ROBUX[0];
+    return `
+    <div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Robux</div><h1><img class="ico-img ico-h1" src="img/robux.png" alt="" width="34" height="37"> Robux 120H</h1>
+    <p>Robux giao thẳng vào tài khoản Roblox của bạn sau 120 giờ.</p></div>
+    <div class="note" style="margin-bottom:18px">${esc(g.desc)}</div>
+    <div class="grid g3" id="list">${g.items.map((i) => itemCard(g, i)).join("")}</div>`;
+  };
+
   views["vat-pham"] = (p) => {
+    if (p[0] === "robux-120h") { location.replace("#/robux"); return views.robux(); }
     const all = p[0] === "all";
     const cur = ITEM_GROUPS.find((g) => g.id === p[0]) || (all ? null : ITEM_GROUPS[0]);
     const cards = all ? ITEM_GROUPS.flatMap((g) => g.items.map((i) => itemCard(g, i))) : cur.items.map((i) => itemCard(cur, i));
     return `
     <div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Vật phẩm</div><h1>Vật phẩm Blox Fruits</h1>
-    <p>Robux, trái ác quỷ và gamepass giao thẳng vào tài khoản Roblox của bạn.</p></div>
-    <div class="tabs"><a class="tab ${all ? "on" : ""}" href="#/vat-pham/all">✨ Tất cả</a>${ITEM_GROUPS.map((g) => `<a class="tab ${cur && g.id === cur.id ? "on" : ""}" href="#/vat-pham/${g.id}">${g.icon} ${esc(g.name)}</a>`).join("")}</div>
+    <p>Trái ác quỷ và gamepass giao thẳng vào tài khoản Roblox của bạn.</p></div>
+    <div class="tabs"><a class="tab ${all ? "on" : ""}" href="#/vat-pham/all">✨ Tất cả</a>${ITEM_GROUPS.map((g) => `<a class="tab ${cur && g.id === cur.id ? "on" : ""}" href="#/vat-pham/${g.id}">${gIcon(g)} ${esc(g.name)}</a>`).join("")}</div>
     ${searchBox}
     ${cur ? `<div class="note" style="margin-bottom:18px">${esc(cur.desc)}</div>` : ""}
     <div class="grid g3" id="list">${cards.join("")}</div><div class="empty" id="none" hidden><div class="big">🔍</div>Không tìm thấy kết quả phù hợp.</div>`;
@@ -643,7 +660,7 @@ views["gio-hang"].after = () => {
   // Bảng giá gốc vs giá bán (dành cho chủ shop): #/bang-gia
   views["bang-gia"] = () => {
     const rows = [
-      ...ITEM_GROUPS.flatMap((g) => g.items.map((i) => ["Vật phẩm • " + g.name, i.name, i.base])),
+      ...ITEMS_ALL.flatMap((g) => g.items.map((i) => [(g.id === "robux-120h" ? "Robux • " : "Vật phẩm • ") + g.name, i.name, i.base])),
       ...BOOST.groups.flatMap((g) => g.items.map((i) => ["Cày thuê • " + g.name, i.name, i.base])),
     ];
     return `<div class="ph"><h1>Bảng giá (nội bộ)</h1><p>Giá gốc teanstore + ${vnd(MK)} = giá bán. Sửa giá gốc trong <code>js/data.js</code>. Trang này không có link công khai.</p></div>
@@ -673,7 +690,7 @@ views["gio-hang"].after = () => {
     if (add) {
       flyToCart(add);
       const [type, gid, id] = add.dataset.add.split("|");
-      if (type === "item") { const g = ITEM_GROUPS.find((x) => x.id === gid), i = g.items.find((x) => x.id === id); addToCart({ key: type+"|"+gid+"|"+i.id, group:gid, type, id: i.id, name: i.name, cat: g.name, unit: sell(i.base) }); }
+      if (type === "item") { const g = ITEMS_ALL.find((x) => x.id === gid), i = g.items.find((x) => x.id === id); addToCart({ key: type+"|"+gid+"|"+i.id, group:gid, type, id: i.id, name: i.name, cat: g.name, unit: sell(i.base) }); }
       else if (type === "boost") { const g = BOOST.groups.find((x) => x.id === gid), i = g.items.find((x) => x.id === id); addToCart({ key: type+"|"+gid+"|"+i.id, group:gid, type, id: i.id, name: i.name, cat: "Cày thuê • " + g.name, unit: sell(i.base) }); }
       return;
     }
