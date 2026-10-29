@@ -114,7 +114,7 @@
       <a class="card hv cat" href="#/robux"><span class="ico"><img class="ico-img" src="img/robux.png" alt="" width="40" height="44" decoding="async"></span><h3>Robux 120H</h3><p>Robux giao sau 120 giờ — an toàn, không cần mật khẩu, chỉ cần Roblox username.</p><span class="go">Mua Robux →</span></a>
       <a class="card hv cat" href="#/vat-pham"><span class="ico">🍎</span><h3>Vật phẩm Blox Fruits</h3><p>Trái ác quỷ vĩnh viễn, trái rương, gamepass.</p><span class="go">Xem vật phẩm →</span></a>
       <a class="card hv cat" href="#/cay-thue"><span class="ico">⚔️</span><h3>Cày thuê Blox Fruits</h3><p>Level, Sea, Race V4, CDK, Godhuman, Mastery, Beli…</p><span class="go">Xem bảng giá →</span></a>
-      <a class="card hv cat" href="#/steal-an-egg"><span class="ico">🥚</span><h3>Steal An Egg</h3><p>Cày thuê Steal An Egg theo ngày (25k/ngày), auto sự kiện, chạy bộ, cướp trứng, upgrade...</p><span class="go">Xem dịch vụ →</span></a>
+      <a class="card hv cat" href="#/steal-an-egg"><span class="ico"><img class="ico-img" src="img/steal-an-egg.png" alt="" width="36" height="40" decoding="async"></span><h3>Steal An Egg</h3><p>Cày thuê Steal An Egg theo ngày (25k/ngày), auto sự kiện, chạy bộ, cướp trứng, upgrade...</p><span class="go">Xem dịch vụ →</span></a>
       <a class="card hv cat" href="#/acc"><span class="ico">🎮</span><h3>Acc Roblox tự chọn</h3><p>Lọc theo game (Blox Fruits, Steal An Egg…), sắp xếp theo giá, xem thông số. Gửi mã acc cho admin rồi thanh toán để nhận mật khẩu.</p><span class="go">Chọn acc →</span></a>
       <a class="card hv cat" href="#/tui-mu"><span class="ico">🎒</span><h3>Acc túi mù Blox</h3><p>50.000đ / acc. 100% có Soul Guitar, CDK, Godhuman.</p><span class="go">Xem acc túi mù Blox →</span></a>
       <a class="card hv cat" href="#/don-hang"><span class="ico">📦</span><h3>Đơn hàng của tôi</h3><p>Theo dõi trạng thái các đơn bạn đã đặt trên thiết bị này.</p><span class="go">Xem đơn →</span></a>
@@ -146,7 +146,7 @@
     if (i.isCustomDays) {
       const rate = i.ratePerDay || 25000;
       return `<div class="card prod custom-service-card" data-service-card="${esc(i.id)}" data-rate="${rate}">
-        <h3>${g.icon} ${esc(i.name)} ${i.tag ? `<span class="tag">${esc(i.tag)}</span>` : ""}</h3>
+        <h3>${gIcon(g)} ${esc(i.name)} ${i.tag ? `<span class="tag">${esc(i.tag)}</span>` : ""}</h3>
         <div class="meta">Cày thuê • ${esc(g.name)}${i.eta ? " • " + esc(i.eta) : ""}</div>
         ${i.note ? `<div class="service-note-box"><b>✦ Tính năng & Ghi chú:</b><p>${esc(i.note)}</p></div>` : ""}
         <div class="days-selector-wrap">
@@ -169,7 +169,7 @@
       </div>`;
     }
     return `<div class="card prod">
-      <h3>${g.icon} ${esc(i.name)} ${i.tag ? `<span class="tag">${esc(i.tag)}</span>` : ""}</h3>
+      <h3>${gIcon(g)} ${esc(i.name)} ${i.tag ? `<span class="tag">${esc(i.tag)}</span>` : ""}</h3>
       <div class="meta">Cày thuê • ${esc(g.name)}${i.eta ? " • " + esc(i.eta) : ""}</div>
       <div class="pf"><span class="price">${vnd(sell(i.base))}</span>
       <button class="btn btn-p btn-s" data-add="boost|${g.id}|${i.id}">+ Giỏ hàng</button></div></div>`;
@@ -209,7 +209,7 @@
     return `
     <div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Cày thuê</div><h1>Cày thuê Blox Fruits</h1>
     <p>${esc(BOOST.desc)}</p></div>
-    <div class="tabs"><a class="tab ${all ? "on" : ""}" href="#/cay-thue/all">✨ Tất cả</a>${BOOST.groups.map((g) => `<a class="tab ${cur && g.id === cur.id ? "on" : ""}" href="#/cay-thue/${g.id}">${g.icon} ${esc(g.name)}</a>`).join("")}</div>
+    <div class="tabs"><a class="tab ${all ? "on" : ""}" href="#/cay-thue/all">✨ Tất cả</a>${BOOST.groups.map((g) => `<a class="tab ${cur && g.id === cur.id ? "on" : ""}" href="#/cay-thue/${g.id}">${gIcon(g)} ${esc(g.name)}</a>`).join("")}</div>
     ${searchBox}
     <div class="grid g3" id="list">${cards.join("")}</div><div class="empty" id="none" hidden><div class="big">🔍</div>Không tìm thấy kết quả phù hợp.</div>
     <div class="note" style="margin-top:22px">🔒 Đơn cày thuê cần <b>mật khẩu Roblox</b> khi đặt hàng. Mật khẩu được lưu riêng, chỉ admin xem được và tự xoá khi đơn hoàn thành. Hãy đổi mật khẩu sau khi xong.</div>`;
@@ -218,7 +218,7 @@
 
   views["steal-an-egg"] = () => {
     const g = BOOST.groups.find((x) => x.id === "steal-an-egg") || BOOST.groups.find((x) => x.id === "dich-vu-khac") || {
-      id: "steal-an-egg", name: "Steal An Egg", icon: "🥚",
+      id: "steal-an-egg", name: "Steal An Egg", icon: "🥚", iconImg: "img/steal-an-egg.png",
       items: [
         {
           id: "steal-an-egg-daily",
@@ -558,20 +558,21 @@ views["gio-hang"].after = () => {
   }
   const accDetails = (a) => String(a.details||'').split(/\n|,/).map(x=>x.trim()).filter(Boolean);
   const ACCF = { game: "", sort: "new" };
-  views.acc = (p=[]) => {
-    const selected=p[0], cats=AS.categories, list=AS.accounts.filter(a=>!selected||a.category_id===selected), current=cats.find(c=>c.id===selected);
+  const isBagAcc = (a) => Boolean(AS.categories.find(c=>c.id===a.category_id)?.is_blindbag);
+  const customAccs = () => AS.accounts.filter(a=>!isBagAcc(a));
+  views.acc = () => {
+    const list=customAccs();
     const games=[...new Set(list.map(a=>a.game).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
     if(ACCF.game && !games.includes(ACCF.game)) ACCF.game="";
-    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / Kho acc</div><h1>${current?esc(current.name):'Tất cả acc'}</h1><p>Chọn danh mục và game để xem acc đang bán. Có thể sắp xếp theo giá từ thấp đến cao hoặc từ cao xuống thấp.</p></div>
-    <div class="tabs"><a class="tab ${!selected?'on':''}" href="#/acc">Tất cả danh mục</a>${cats.map(c=>`<a class="tab ${c.id===selected?'on':''}" href="#/acc/${esc(c.id)}">${c.is_blindbag?'🎒':'🎮'} ${esc(c.name)}${c.is_custom?'':` · ${vnd(c.price)}`}</a>`).join('')}</div>
+    return `<div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / ${CUSTOM_LABEL}</div><h1>${CUSTOM_LABEL}</h1><p>Chọn game để xem acc đang bán. Có thể sắp xếp theo giá từ thấp đến cao hoặc từ cao xuống thấp.</p></div>
     ${list.length?`<div class="accfilter">
       ${games.length?`<div class="accfilter-row"><span class="accfilter-lb">Game</span><div class="tabs" id="gameTabs" style="margin:0"><button type="button" class="tab ${!ACCF.game?'on':''}" data-game="">Tất cả game</button>${games.map(g=>`<button type="button" class="tab ${ACCF.game===g?'on':''}" data-game="${esc(g)}">${esc(g)}</button>`).join('')}</div></div>`:''}
       <div class="accfilter-row"><span class="accfilter-lb">Sắp xếp</span><select id="accSort" class="accsort"><option value="new" ${ACCF.sort==='new'?'selected':''}>Mới nhất</option><option value="asc" ${ACCF.sort==='asc'?'selected':''}>Giá: thấp → cao</option><option value="desc" ${ACCF.sort==='desc'?'selected':''}>Giá: cao → thấp</option></select><span class="muted small" id="accCount"></span></div>
     </div>
     <div class="search"><span>🔍</span><input type="search" id="q" placeholder="Tìm theo tên, game, thông số hoặc mã acc…" autocomplete="off"></div><div class="grid g3" id="list"></div><div class="empty" id="none" hidden>Không tìm thấy acc phù hợp.</div>`:`<div class="empty"><div class="big">🎮</div><h2>Chưa có acc đang bán</h2><p>Admin sẽ cập nhật thêm acc sau.</p><p style="margin-top:16px"><a class="btn btn-p" href="${esc(S.contact.zalo)}" target="_blank" rel="noopener">💬 Nhắn Zalo admin</a></p></div>`}`;
   };
-  views.acc.after = (p=[]) => {
-    const selected=p[0], list=AS.accounts.filter(a=>!selected||a.category_id===selected), q=$("#q");
+  views.acc.after = () => {
+    const list=customAccs(), q=$("#q");
     if(!q) return;
     const draw=()=>{
       const k=normVN(q.value);

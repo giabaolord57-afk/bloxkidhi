@@ -284,6 +284,7 @@ window.BOOST = {
       id: "steal-an-egg",
       name: "Steal An Egg",
       icon: "🥚",
+      iconImg: "img/steal-an-egg.png",
       desc: "Cày thuê Steal An Egg theo ngày: auto làm sự kiện, chạy bộ, cướp trứng, upgrade...",
       items: [
         {
