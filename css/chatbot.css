@@ -358,3 +358,12 @@
 .cw-modal-cancel { background: #334155; color: #e2e8f0; }
 .cw-modal-ok { background: linear-gradient(135deg, #4338ca, #6366f1); color: #fff; }
 .cw-modal-ok:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Thời gian tin nhắn + icon đánh giá */
+.cw-msg.user .cw-bubble .cw-time { color: #c7d2fe; text-align: right; }
+.cw-msg.bot .cw-bubble .cw-time { color: #94a3b8; }
+.cw-face { font-size: 46px; line-height: 1.1; margin-top: 12px; transition: transform .15s; }
+.cw-face.idle { opacity: .45; filter: grayscale(1); }
+.cw-face:not(.idle) { animation: cwPop .25s ease; }
+@keyframes cwPop { 0% { transform: scale(.6); } 70% { transform: scale(1.18); } 100% { transform: scale(1); } }
+.cw-stars { margin-top: 6px; }
