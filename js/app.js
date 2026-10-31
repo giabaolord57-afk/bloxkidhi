@@ -422,7 +422,7 @@ views["gio-hang"].after = () => {
           try{const {error:pe}=await db.rpc('save_bloxshop_order_password',{p_code:data.code,p_token:data.token,p_password:d.password});if(pe)throw pe;}
           catch(pe){console.error(pe);pwFailed=true;}
         }
-        const o={code:data.code,token:data.token,at:Date.now(),user:(d.user||'').trim(),contact:d.contact.trim(),total:data.total,status:data.status,lines:data.lines,paymentMethod:d.paymentMethod||'bank',paymentStatus:'Chờ kiểm tra'};
+        const o={code:data.code,token:data.token,at:Date.now(),user:(d.user||'').trim(),contact:d.contact.trim(),total:data.total,status:data.status,lines:data.lines,paymentMethod:d.paymentMethod||'bank',paymentStatus:'Chờ kiểm tra',estimated_completion_at:data.estimated_completion_at||null};
         // Store payment proof/card submission separately so admin can review it without changing product-order RPC.
         try {
           const {data:{user:authUser}} = await db.auth.getUser();
@@ -465,7 +465,9 @@ views["gio-hang"].after = () => {
       ${rejected?'<p class="order-progress-rejected">Đơn hàng đã bị từ chối, không tính là hoàn thành.</p>':''}
     </div>`;
   }
+  const etaLabel=o=>o.status==='Hoàn thành'?'Đã hoàn thành':o.status==='Từ chối'?'Không áp dụng':o.estimated_completion_at?new Date(o.estimated_completion_at).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}):'Chưa có dự kiến';
   function refreshDetailStatus(o) {
+    const eta=$('[data-detail-eta]');if(eta)eta.textContent=etaLabel(o);
     const label=$('[data-detail-status]'); if(label) label.textContent=o.status||'Chờ duyệt';
     const progress=$('[data-order-progress]'); if(progress) progress.outerHTML=orderProgress(o.status);
   }
@@ -478,7 +480,7 @@ views["gio-hang"].after = () => {
     <div class="ph"><div class="note ok" style="margin-bottom:16px">✅ Đã tạo đơn <b>${esc(o.code)}</b>. Phương thức đã chọn: <b>${o.paymentMethod==='card'?'Thẻ cào':'Chuyển khoản'}</b>. Admin sẽ kiểm tra thông tin thanh toán trước khi xử lý đơn.</div><h1>Thanh toán</h1></div>
     <div class="layout">
       <div class="card"><h3 style="margin-bottom:12px">Chi tiết đơn</h3><p style="margin-bottom:12px">Trạng thái: <strong class="status" data-detail-status>${esc(o.status || "Chờ duyệt")}</strong></p>
-        ${orderProgress(o.status)}
+        ${orderProgress(o.status)}<p style="margin:12px 0">🕒 Dự kiến hoàn thành: <strong data-detail-eta>${esc(etaLabel(o))}</strong></p>
         ${o.lines.map((l) => `<div class="line"><div class="nm"><b>${esc(l.name)}</b><span>${esc(l.cat)} × ${l.qty}</span></div><b>${vnd(l.unit * l.qty)}</b></div>`).join("")}
         <div class="sum t"><span>Tổng cần thanh toán</span><span class="price">${vnd(o.total)}</span></div>
         <div class="row" style="margin-top:14px"><button class="btn btn-p" id="sendZalo">💬 Sao chép đơn & mở Zalo</button><a class="btn btn-g" href="${esc(S.contact.facebook)}" target="_blank" rel="noopener">Facebook admin</a></div>
@@ -501,9 +503,9 @@ views["gio-hang"].after = () => {
       const {data,error}=await db.rpc('lookup_bloxshop_order',{p_code:o.code,p_token:o.token});
       if(error) { console.warn('Order lookup failed:',error.message); return false; }
       if(!data || typeof data.status !== 'string') return false;
-      o.status=data.status;
+      o.status=data.status;o.estimated_completion_at=data.estimated_completion_at||null;
       const all=getOrders(); const saved=all.find(x=>x.code===o.code);
-      if(saved){saved.status=data.status;setOrders(all);}
+      if(saved){saved.status=data.status;saved.estimated_completion_at=o.estimated_completion_at;setOrders(all);}
       return true;
     } catch(e) { console.warn('Order lookup failed:',e); return false; }
   }
@@ -529,7 +531,7 @@ views["gio-hang"].after = () => {
 
   views["don-hang"].after = async () => {
     const orders=getOrders(); let changed=false;
-    for(const o of orders){if(!o.token)continue;try{const {data,error}=await db.rpc('lookup_bloxshop_order',{p_code:o.code,p_token:o.token});if(!error&&data){o.status=data.status;changed=true;}}catch(e){console.warn(e);}}
+    for(const o of orders){if(!o.token)continue;try{const {data,error}=await db.rpc('lookup_bloxshop_order',{p_code:o.code,p_token:o.token});if(!error&&data){o.status=data.status;o.estimated_completion_at=data.estimated_completion_at||null;changed=true;}}catch(e){console.warn(e);}}
     if(changed){setOrders(orders);document.querySelectorAll('[data-order-status]').forEach(el=>{const o=orders.find(x=>x.code===el.dataset.orderStatus);if(o)el.textContent=o.status;});}
   };
   /* ---------- ACC TỰ CHỌN & ACC TÚI MÙ (mua qua Zalo/Facebook, không cần giỏ hàng) ---------- */

@@ -1,0 +1,7 @@
+1. Sao lưu Supabase.
+2. Chạy MIGRATION-TAI-KHOAN-SUPABASE.sql (nếu chưa chạy).
+3. Chạy SETUP-DU-KIEN-HOAN-THANH.sql (nếu chưa chạy).
+4. Chạy SETUP-BOT-LICH-SU-DON.sql trong Supabase SQL Editor.
+5. Deploy toàn bộ thư mục bloxkidhi-main lên Vercel.
+6. Đăng nhập tài khoản khách, mở Support 24/7 và hỏi 'Lịch sử đơn hàng'.
+Bảo mật: chỉ trả về đơn có orders.user_id = auth.uid(). Đơn cũ chưa gắn UID không tự động nhận là của khách; vẫn tra cứu bằng token cũ. Không gửi mật khẩu/token vào chat.
