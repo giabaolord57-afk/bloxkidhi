@@ -45,6 +45,25 @@ async function orderReply(question=''){
  }catch(_){return 'Không thể tải lịch sử đơn lúc này. Vui lòng thử lại sau.';}
 }
 const fmtTime=ts=>{const d=ts?new Date(ts):new Date();if(isNaN(d))return '';const o={timeZone:'Asia/Ho_Chi_Minh'},t=d.toLocaleTimeString('vi-VN',{...o,hour:'2-digit',minute:'2-digit'}),day=x=>x.toLocaleDateString('vi-VN',o);return day(d)===day(new Date())?t:t+' · '+d.toLocaleDateString('vi-VN',{...o,day:'2-digit',month:'2-digit'})};
+// ===== AI (Gemini) — chỉ gọi khi bot từ khóa không hiểu; lỗi/hết lượt thì dùng câu trả lời cũ =====
+const aiHist=[];let aiBusy=false,aiOffUntil=0;
+const redact=t=>String(t).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'[email]').replace(/\d[\d\s.-]{7,}\d/g,'[số]');
+function aiContext(){
+ const lines=[];groups.forEach(g=>{const ps=unique.filter(p=>p.category===g.name);if(!ps.length)return;lines.push('## '+g.name+(g.desc?' — '+g.desc:'')+'\n'+ps.slice(0,40).map(p=>p.name+': '+fmt(priceOf(p))).join('; '))});
+ if(window.BOOST&&window.BOOST.desc)lines.push('## Lưu ý cày thuê: '+window.BOOST.desc);
+ lines.push('## Cách mua: '+answers.buy,'## Thanh toán: chuyển khoản (VietQR, có thể gửi bill) hoặc thẻ cào; làm theo biểu mẫu ở bước thanh toán.','## Bảo hành: chưa có chính sách chung; điều kiện riêng do Admin xác nhận.','## LIÊN HỆ: Zalo '+(contact.zalo||'chưa cập nhật')+'; Facebook '+(contact.facebook||'chưa cập nhật'));
+ const faqTxt=faqList.map(f=>'Hỏi: '+f.title+'\nĐáp: '+faqFill(f.a)).join('\n\n').slice(0,7000);
+ return lines.join('\n').slice(0,6800)+'\n\n=== FAQ CỦA SHOP ===\n'+faqTxt}
+async function askAI(q){
+ const dbx=window.BX_SUPABASE;if(!dbx||!window.SHOP.aiChat||Date.now()<aiOffUntil)return null;
+ try{
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),22000);
+  const {data,error}=await dbx.functions.invoke('ai-chat',{body:{message:redact(q),context:aiContext(),history:aiHist.slice(-6)},signal:ctl.signal});clearTimeout(t);
+  if(error||!data||typeof data.reply!=='string'){aiOffUntil=Date.now()+60000;return null}
+  aiHist.push({role:'user',text:redact(q)},{role:'model',text:data.reply});if(aiHist.length>12)aiHist.splice(0,2);
+  return data.reply;
+ }catch(_){aiOffUntil=Date.now()+60000;return null}
+}
 function append(who,message,imgUrl,ts){const staff=who==='staff';const row=document.createElement('div');row.className='cw-msg '+(staff?'bot staff':who);const avatar=document.createElement('span');avatar.className='cw-msg-av';avatar.textContent=staff?'🎧':who==='bot'?'🤖':'👤';const bubble=document.createElement('div');bubble.className='cw-bubble';// Chỉ tạo link từ URL cấu hình shop, không thực thi HTML từ tin nhắn.
 const parts=String(message).split(/(https?:\/\/[^\s]+)/g);parts.forEach(part=>{if(/^https?:\/\//.test(part)){const a=document.createElement('a');a.href=part;a.target='_blank';a.rel='noopener noreferrer';a.textContent=part;bubble.append(a)}else bubble.append(document.createTextNode(part))});if(imgUrl){const im=document.createElement('img');im.className='cw-img';im.alt='Ảnh';im.src=imgUrl;im.addEventListener('click',()=>window.open(imgUrl,'_blank','noopener'));im.addEventListener('load',()=>{body.scrollTop=body.scrollHeight});bubble.append(im)}const tm=document.createElement('span');tm.className='cw-time';tm.textContent=fmtTime(ts);bubble.append(tm);row.append(avatar,bubble);body.append(row);body.scrollTop=body.scrollHeight}
 const priceOf=p=>typeof p.raw.price==='number'?p.raw.price:p.base+((p.raw&&p.raw.noMarkup)?0:(window.SHOP.markup||0));
@@ -61,8 +80,19 @@ warranty:'Dữ liệu sản phẩm hiện chưa cung cấp một thời hạn b�
 account:'Bạn có thể đăng nhập để xem các đơn gắn với tài khoản. Đơn cũ chưa liên kết tài khoản cần mã đơn và mã tra cứu riêng. Không nhập mật khẩu, OTP hoặc token tra cứu vào khung chat công khai.',
 contact:'Liên hệ Admin BDShopVN:\nZalo: '+(contact.zalo||'chưa cập nhật')+'\nFacebook: '+(contact.facebook||'chưa cập nhật')+'.',
 };
+// ===== FAQ (js/faq.js): khớp cụm từ; cụm dài nhất thắng. Khách gõ nguyên tên sản phẩm thì ưu tiên chi tiết sản phẩm. =====
+const faqList=Array.isArray(window.SHOP_FAQ)?window.SHOP_FAQ:[];
+const faqFill=t=>String(t).replace(/\{zalo\}/g,contact.zalo||'(chưa cập nhật)').replace(/\{facebook\}/g,contact.facebook||'(chưa cập nhật)');
+function faqMatch(n){
+ const hay=' '+n+' ';let best=null,len=0;
+ faqList.forEach(f=>(f.k||[]).forEach(k=>{if(k.length>len&&hay.includes(' '+k+' ')){best=f;len=k.length}}));
+ if(!best)return null;
+ if(unique.some(p=>{const pn=norm(p.name);return pn.length>=7&&n.includes(pn)}))return null;
+ return best}
+const FALLBACK='Mình chưa xác định chính xác sản phẩm hoặc vấn đề bạn muốn hỏi. Bạn có thể nhắn tên sản phẩm, “liệt kê giá Robux”, “cày thuê có gì”, “cách mua”, “thanh toán” hoặc “lịch sử đơn hàng”. Mình sẽ trả lời chi tiết ngay trong chat; thông tin chưa có trong dữ liệu shop mình sẽ nói rõ.';
 function reply(question){const q=norm(question);if(!q)return 'Bạn nhập câu hỏi giúp mình nhé.';if(/cam on|thank|thanks/.test(q))return 'Rất vui được hỗ trợ bạn! 😊';
 if(/^(hi|hello|alo|chao|xin chao|shop oi|ad oi)$/.test(q))return answers.hello;
+const faq=faqMatch(q);if(faq)return faqFill(faq.a);
 if(/lien he|zalo|facebook|admin|nhan vien|tu van truc tiep/.test(q))return answers.contact;
 if(/bao hanh|hoan tien|doi tra/.test(q))return answers.warranty;
 if(/thanh toan|chuyen khoan|the cao|nap tien|qr/.test(q))return answers.pay;
@@ -79,7 +109,7 @@ if(last&&!/robux|120h|cay thue|booster/.test(q)&&/^(gia|bao nhieu|mua sao|chi ti
 if(/robux|120h/.test(q))return answers.robux;
 const listing=byCategory(q);if(listing)return listing;
 if(/giao bao lau|mat bao lau|thoi gian giao/.test(q))return 'Robux 120H: dự kiến 120 giờ theo mô tả sản phẩm. Với các sản phẩm khác, thời gian hoàn thành phụ thuộc từng gói và ETA Admin cập nhật; dữ liệu hiện không có thời hạn chung để cam kết.';
-return 'Mình chưa xác định chính xác sản phẩm hoặc vấn đề bạn muốn hỏi. Bạn có thể nhắn tên sản phẩm, “liệt kê giá Robux”, “cày thuê có gì”, “cách mua”, “thanh toán” hoặc “lịch sử đơn hàng”. Mình sẽ trả lời chi tiết ngay trong chat; thông tin chưa có trong dữ liệu shop mình sẽ nói rõ.';
+return FALLBACK;
 }
 // ===== CSKH: chat trực tiếp với Admin (Supabase) — nút "Gặp CSKH" <-> "Hỏi AI" =====
 const STAFF_TEXT='Tôi cần gặp nhân viên hỗ trợ';
@@ -122,7 +152,9 @@ async function sendStaff(q){if(!q&&!pendingImg)return;const img=pendingImg;let p
  append('user',q,img?img.url:null);sentInSession=true;renderMode();input.value='';clearImg();if(typeof data==='number')lastId=Math.max(lastId,data)}
 async function send(q){q=String(q||'').trim().slice(0,mode==='admin'?1000:500);if(!q&&!(mode==='admin'&&pendingImg))return;
  if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{sending=false;sendBtn.disabled=false}return}
- append('user',q);input.value='';const n=norm(q);const answer=/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)?await orderReply(q):reply(q);append('bot',answer)}
+ append('user',q);input.value='';const n=norm(q);let answer=!faqMatch(n)&&/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)?await orderReply(q):reply(q);
+ if(answer===FALLBACK&&window.SHOP.aiChat&&!aiBusy){aiBusy=true;sendBtn.disabled=true;append('bot','Đang soạn câu trả lời…');const wait=body.lastElementChild;try{const ai=await askAI(q);if(ai)answer=ai}finally{aiBusy=false;sendBtn.disabled=false;if(wait&&wait.parentNode)wait.remove()}}
+ append('bot',answer)}
 
 // ===== Emoji, ảnh, "Đã giải quyết" + đánh giá sao =====
 const row=panel.querySelector('.cw-input-row');

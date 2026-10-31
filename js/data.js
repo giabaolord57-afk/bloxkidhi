@@ -10,6 +10,10 @@
 window.SHOP = {
   name: "BDShopVN",
   tagline: "Shop Blox Fruits uy tín • Giao nhanh • Bảo hành",
+  // Khoá công khai VAPID cho thông báo đẩy (xem HUONG-DAN-THONG-BAO-PUSH.txt). Để trống = tắt tính năng.
+  vapidPublicKey: "",
+  // Bật AI Gemini cho chatbot (cần deploy Edge Function ai-chat, xem HUONG-DAN-AI-GEMINI.txt). false = chỉ dùng bot từ khóa.
+  aiChat: true,
   markup: 20000, // cộng thêm so với teanstore
 
   // Liên hệ (lấy từ myweb cũ — sửa lại thành của bạn)

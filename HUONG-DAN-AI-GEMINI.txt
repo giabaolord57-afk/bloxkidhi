@@ -1,0 +1,38 @@
+AI GEMINI CHO KHUNG CHAT BDSHOPVN
+
+Cách hoạt động: bot từ khóa cũ vẫn trả lời trước. Chỉ khi bot không hiểu (rơi vào câu "Mình chưa xác định chính xác...")
+mới gọi Gemini qua Edge Function "ai-chat". Gemini lỗi / hết lượt / chưa cài -> bot vẫn hiện câu trả lời cũ, không hỏng.
+Khoá API chỉ nằm trong secret của Supabase, KHÔNG để trong JS/GitHub.
+
+BƯỚC 1 - Lấy khoá miễn phí: vào https://aistudio.google.com > "Get API key" > tạo khoá. Tự giữ, đừng gửi cho ai.
+         Xem kỹ điều khoản gói miễn phí (nội dung gửi lên có thể được dùng để cải thiện sản phẩm Google).
+
+BƯỚC 2 - Supabase SQL Editor: chạy SETUP-AI-CHAT.sql
+
+BƯỚC 3 - Cài secret và deploy hàm (Supabase CLI: supabase login, supabase link):
+   supabase secrets set GEMINI_API_KEY="<khoá của bạn>"
+   supabase secrets set ALLOWED_ORIGIN="https://ten-mien-cua-ban.vercel.app"
+   supabase functions deploy ai-chat --no-verify-jwt
+   (--no-verify-jwt vì web dùng khoá publishable; hàm tự chặn spam bằng giới hạn lượt bên dưới.)
+   Tuỳ chọn:
+   supabase secrets set GEMINI_MODEL="gemini-2.5-flash"   # mặc định; nếu Google đổi tên/ngừng model thì đặt tên model mới ở đây
+   supabase secrets set AI_DAILY_CAP=900 AI_IP_PER_MIN=6 AI_IP_PER_DAY=50
+
+BƯỚC 4 - Deploy lại web (js/chatbot.js, js/data.js, index.html đã sửa). Trong js/data.js: aiChat: true (đặt false để tắt AI).
+
+KIỂM THỬ: mở chat, hỏi câu bot cũ không hiểu, vd "tư vấn giúp mình nên mua gì để chơi mạnh hơn".
+   Thấy "Đang soạn câu trả lời…" rồi câu trả lời của AI là thành công.
+   Nếu vẫn ra câu mặc định: xem Supabase > Edge Functions > ai-chat > Logs (sai khoá, sai tên model, hết hạn mức, chưa deploy).
+
+GIỚI HẠN VÀ BẢO MẬT:
+- Mỗi IP tối đa 6 lượt/phút và 50 lượt/ngày; cả shop tối đa 900 lượt/ngày (giữ dưới hạn mức miễn phí; chỉnh theo hạn mức thực tế của bạn).
+  Quá giới hạn thì bot tự quay về câu trả lời cũ.
+- Trước khi gửi, trình duyệt che email và dãy số dài (>=9 chữ số) trong câu hỏi. Đơn hàng/tài khoản khách KHÔNG được gửi cho AI.
+- AI chỉ được dùng bảng giá/FAQ do trang gửi kèm (lấy từ data.js), được dặn không bịa giá/bảo hành và không xin mật khẩu.
+- Dữ liệu giá do trình duyệt gửi lên nên người dùng kỹ thuật có thể gọi hàm với nội dung tuỳ ý; vì vậy mới có giới hạn lượt và giới hạn độ dài.
+  Nếu giá phải tuyệt đối chính xác, vẫn dùng bảng giá trong bot từ khóa làm nguồn chính.
+- Muốn thêm kiến thức (FAQ, chính sách), thêm dòng vào hàm aiContext() trong js/chatbot.js.
+
+FAQ (js/faq.js): 23 mục hỏi-đáp viết từ dữ liệu thật của shop. Bot từ khóa trả lời các câu này ngay (không tốn lượt AI),
+đồng thời toàn bộ FAQ được gửi kèm làm kiến thức cho Gemini. Sửa/thêm mục ngay trong js/faq.js; nhớ tăng số ?v= của faq.js trong index.html sau khi sửa.
+Nên đọc lại các mục sau và sửa nếu shop có chính sách khác: pay_card (mức phí thẻ cào), robux_time, boost_password, blindbag, hours.
