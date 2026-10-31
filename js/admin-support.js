@@ -17,7 +17,7 @@ async function loadChats(){
 }
 function renderList(){
   const total=chats.reduce((n,c)=>n+(c.unread_admin||0),0),u=$('supUnread');
-  u.style.display=total?'':'none';u.textContent=total;
+  u.style.display=total?'':'none';u.textContent=total;const tb=$('tabSupUnread');if(tb){tb.style.display=total?'':'none';tb.textContent=total}
   document.title=(total?'('+total+') ':'')+'Admin Dashboard | BDShopVN';
   $('supList').innerHTML=chats.length?chats.map(c=>`<button type="button" class="sup-item ${cur&&cur.id===c.id?'on':''}" data-chat="${esc(c.id)}"><b><span>${esc(c.username||'Khách')}</span><span>${c.unread_admin?`<span class="sup-dot">${c.unread_admin}</span>`:''}</span></b><small>${esc(c.last_message||'')}</small><small><span class="sup-tag ${c.mode==='admin'?'admin':''}">${c.mode==='admin'?'Chờ/đang chat với Admin':'Khách dùng AI'}</span> ${c.status==='closed'?'<span class="sup-tag closed">Đã đóng</span>':''} · ${esc(time(c.last_message_at))}</small></button>`).join(''):'<div class="sup-empty">Chưa có khách nào liên hệ CSKH.</div>';
 }

@@ -78,7 +78,7 @@ const STAFF_TEXT='Tôi cần gặp nhân viên hỗ trợ';
 const db=window.BX_SUPABASE,statusEl=panel.querySelector('.cw-status'),badge=fab.querySelector('.chat-fab-badge'),sendBtn=$('cwSend');
 let pendingImg=null,mode='ai',chat=null,lastId=0,channel=null,poller=null,historyLoaded=false,busyStaff=false,unread=0,sending=false;
 const staffBtn=document.createElement('button');staffBtn.className='cw-chip cw-chip-staff';staffBtn.type='button';
-function renderMode(){const m=mode==='admin';resolveBtn.hidden=!m;imgBtn.hidden=!m;if(!m)clearImg();staffBtn.textContent=m?'🤖 Hỏi AI':'☏ Gặp CSKH';staffBtn.title=m?'Quay lại trợ lý AI':'Chat trực tiếp với nhân viên hỗ trợ';
+function renderMode(){const m=mode==='admin';imgBtn.hidden=!m;if(!m)clearImg();staffBtn.textContent=m?'🤖 Hỏi AI':'☏ Gặp CSKH';staffBtn.title=m?'Quay lại trợ lý AI':'Chat trực tiếp với nhân viên hỗ trợ';
  panel.classList.toggle('cw-staff-mode',m);if(statusEl)statusEl.textContent=m?'● Đang chat với nhân viên CSKH':'● Trợ lý tự động BDShopVN';
  input.placeholder=m?'Nhắn cho nhân viên CSKH...':'Nhập câu hỏi...'}
 const isOpen=()=>panel.classList.contains('open');
@@ -137,7 +137,7 @@ file.addEventListener('change',async()=>{const f=file.files&&file.files[0];if(!f
 input.addEventListener('paste',e=>{if(mode!=='admin')return;const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it){e.preventDefault();const dt=new DataTransfer();dt.items.add(it.getAsFile());file.files=dt.files;file.dispatchEvent(new Event('change'))}});
 
 // Nút "Vấn đề đã được giải quyết" -> hộp đánh giá sao ngay giữa khung chat
-const resolveBtn=document.createElement('button');resolveBtn.type='button';resolveBtn.className='cw-chip cw-chip-resolve';resolveBtn.textContent='✅ Vấn đề đã được giải quyết';resolveBtn.hidden=true;
+const resolveBtn=document.createElement('button');resolveBtn.type='button';resolveBtn.className='cw-chip cw-chip-resolve';resolveBtn.textContent='✅ Vấn đề đã được giải quyết';
 const modal=document.createElement('div');modal.className='cw-modal';modal.hidden=true;modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');
 modal.innerHTML='<div class="cw-modal-card"><div class="cw-modal-title">Vấn đề đã được giải quyết?</div><div class="cw-modal-sub">Bạn đánh giá lần hỗ trợ này thế nào?</div><div class="cw-stars" role="radiogroup" aria-label="Số sao"></div><div class="cw-star-label"> </div><textarea class="cw-modal-text" rows="3" maxlength="500" placeholder="Gửi đánh giá cho nhân viên bằng tin nhắn (không bắt buộc)..."></textarea><div class="cw-modal-err"></div><div class="cw-modal-actions"><button type="button" class="cw-modal-cancel">Chưa xong</button><button type="button" class="cw-modal-ok" disabled>Gửi đánh giá</button></div></div>';
 panel.append(modal);
@@ -147,7 +147,7 @@ const paint=n=>{[...starsBox.children].forEach((b,i)=>b.classList.toggle('on',i<
 for(let i=1;i<=5;i++){const b=document.createElement('button');b.type='button';b.textContent='★';b.setAttribute('role','radio');b.setAttribute('aria-label',i+' sao');b.addEventListener('mouseenter',()=>paint(i));b.addEventListener('focus',()=>paint(i));b.addEventListener('click',()=>{stars=i;paint(i);okBtn.disabled=false});starsBox.append(b)}
 starsBox.addEventListener('mouseleave',()=>paint(stars));
 const closeModal=()=>{modal.hidden=true};
-resolveBtn.addEventListener('click',()=>{if(!chat)return;stars=0;paint(0);txt.value='';errEl.textContent='';okBtn.disabled=true;okBtn.textContent='Gửi đánh giá';modal.hidden=false});
+resolveBtn.addEventListener('click',()=>{if(!chat){append('bot','Nút này dùng sau khi bạn đã chat với nhân viên CSKH để đánh giá lần hỗ trợ. Hãy bấm “☏ Gặp CSKH” (cần đăng nhập) để được nhân viên hỗ trợ trước nhé.');return}stars=0;paint(0);txt.value='';errEl.textContent='';okBtn.disabled=true;okBtn.textContent='Gửi đánh giá';modal.hidden=false});
 modal.querySelector('.cw-modal-cancel').addEventListener('click',closeModal);
 modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal()});

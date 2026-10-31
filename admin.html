@@ -170,6 +170,12 @@
 
 
     /* ===== CSKH chat ===== */
+    .admin-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 18px; padding:6px; border:1px solid var(--bd); border-radius:14px; background:rgba(10,14,24,.6); position:sticky; top:8px; z-index:20; backdrop-filter:blur(8px); }
+    .admin-tabs a { flex:1 1 180px; display:flex; align-items:center; justify-content:center; gap:8px; padding:11px 14px; border-radius:10px; color:var(--tx2); font-weight:700; text-decoration:none; transition:.2s; text-align:center; }
+    .admin-tabs a:hover { background:rgba(0,240,255,.07); color:var(--tx); }
+    .admin-tabs a.on { background:linear-gradient(135deg,rgba(0,240,255,.2),rgba(99,102,241,.25)); color:#fff; box-shadow:inset 0 0 0 1px rgba(0,240,255,.45); }
+    .admin-page[hidden] { display:none; }
+    .admin-page > .card:first-child { margin-top:0; }
     .sup-wrap { display:grid; grid-template-columns:300px 1fr; gap:14px; margin-top:14px; min-height:420px; }
     .sup-list { border:1px solid var(--bd); border-radius:14px; background:rgba(10,14,24,.6); overflow-y:auto; max-height:520px; }
     .sup-item { display:block; width:100%; text-align:left; padding:12px 14px; border:0; border-bottom:1px solid rgba(255,255,255,.08); background:transparent; color:var(--tx); cursor:pointer; font:inherit; }
@@ -242,7 +248,13 @@
         <button class="btn btn-p btn-s" id="refresh">🔄 Làm mới đơn</button>
       </div>
       <p id="message"></p>
+      <nav class="admin-tabs" id="adminTabs" aria-label="Các trang quản trị">
+        <a href="#/don-hang" data-tab="don-hang">📦 Đơn hàng &amp; thanh toán</a>
+        <a href="#/ho-tro" data-tab="ho-tro">💬 Hỗ trợ khách <span id="tabSupUnread" class="sup-dot" style="display:none"></span></a>
+        <a href="#/kho-acc" data-tab="kho-acc">🗃️ Kho acc</a>
+      </nav>
 
+      <div class="admin-page" data-page="ho-tro" hidden>
       <div class="card" id="supportCard">
         <h2>💬 Chat hỗ trợ khách (CSKH) <span id="supUnread" class="sup-dot" style="display:none"></span></h2>
         <p class="muted small">Khách bấm “Gặp CSKH” trong khung Support 24/7 sẽ xuất hiện ở đây. Trả lời tại đây, khách thấy ngay trong khung chat. Nhãn “AI” nghĩa là khách đã chuyển sang trợ lý tự động.</p>
@@ -262,7 +274,9 @@
         <p class="muted small">Hiện khi khách bấm “Vấn đề đã được giải quyết” và chấm sao (cần chạy SETUP-CHAT-CSKH-V2.sql).</p>
         <div class="scroll"><table><thead><tr><th>Thời gian</th><th>Khách</th><th>Đánh giá</th><th>Nhận xét</th></tr></thead><tbody id="supRatings"><tr><td colspan="4">Đang tải...</td></tr></tbody></table></div>
       </div>
+      </div>
 
+      <div class="admin-page" data-page="kho-acc" hidden>
       <div class="card">
         <h2>📁 Quản lý danh mục acc</h2>
         <p>Tạo danh mục mới và đặt giá áp dụng tự động cho mọi acc trong danh mục.</p>
@@ -330,7 +344,9 @@
           </table>
         </div>
       </div>
+      </div>
 
+      <div class="admin-page" data-page="don-hang">
       <div class="card">
         <h2>📦 Danh sách đơn hàng</h2>
         <div class="toolbar" style="margin-top:0">
@@ -384,14 +400,29 @@
         <p id="payCounts" class="muted small"></p>
         <div class="scroll"><table><thead><tr><th>Chọn</th><th>Mã đơn</th><th>Phương thức</th><th>Chi tiết thẻ</th><th>Bill (link 24 giờ)</th><th>Trạng thái</th><th>Ghi chú Admin</th><th>Thao tác</th></tr></thead><tbody id="paymentSubmissions"><tr><td colspan="8">Đang tải...</td></tr></tbody></table></div>
       </div>
+      </div>
     </section>
   </main>
 
+  <script>
+  (function(){
+    var pages=['don-hang','ho-tro','kho-acc'];
+    function go(){
+      var h=(location.hash||'').replace('#/','').replace('#','');
+      if(pages.indexOf(h)<0){try{h=localStorage.getItem('bx_admin_tab')||''}catch(e){}}
+      if(pages.indexOf(h)<0)h='don-hang';
+      document.querySelectorAll('.admin-page').forEach(function(el){el.hidden=el.dataset.page!==h});
+      document.querySelectorAll('#adminTabs a').forEach(function(a){var on=a.dataset.tab===h;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+      try{localStorage.setItem('bx_admin_tab',h)}catch(e){}
+    }
+    window.addEventListener('hashchange',go);go();
+  })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/supabase.js"></script>
   <script src="js/admin.js?v=18"></script>
   <script src="js/admin-payments.js?v=2"></script>
-  <script src="js/admin-support.js?v=3"></script>
+  <script src="js/admin-support.js?v=4"></script>
   <script>window.addEventListener("error",function(e){if(e.target&&e.target.tagName==="SCRIPT"){var m=document.getElementById("message");if(m)m.textContent="Không tải được tệp JavaScript: "+(e.target.src||"");}},true);</script>
 </body>
 </html>
