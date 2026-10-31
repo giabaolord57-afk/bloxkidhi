@@ -7,6 +7,9 @@ const fmt=n=>Number(n).toLocaleString('vi-VN')+'đ';
 const contact=window.SHOP.contact||{};
 const link=(url,label)=>url?'['+label+']('+url+')':label;
 const groups=[...(window.ROBUX_GROUPS||[]),...(window.ITEM_GROUPS||[]),...(window.CAY_THUE_GROUPS||[]),...(window.STEAL_AN_EGG_GROUPS||[])];
+// Dữ liệu Cày thuê nằm ở window.BOOST.groups (tên biến không kết thúc bằng GROUPS) nên phải nạp riêng.
+const boostGroups=((window.BOOST&&window.BOOST.groups)||[]).filter(g=>g&&g.items);
+boostGroups.forEach(g=>{if(!groups.includes(g))groups.push(g)});
 // Quét tất cả nhóm trong data.js, kể cả các nhóm đặt tên khác.
 Object.keys(window).filter(k=>/GROUPS$/.test(k)&&Array.isArray(window[k])).forEach(k=>window[k].forEach(g=>{if(g&&g.items&&!groups.includes(g))groups.push(g)}));
 const products=[];function walk(node,category){if(!node||typeof node!=='object')return;if(Array.isArray(node)){node.forEach(x=>walk(x,category));return}const cat=node.name&&Array.isArray(node.items)?node.name:category;if(node.name&&typeof node.base==='number')products.push({name:node.name,base:node.base,category:category||'',id:node.id,raw:node});if(node.items)walk(node.items,cat);if(node.groups)walk(node.groups,cat)}groups.forEach(g=>walk(g,g.name));
@@ -46,7 +49,7 @@ const parts=String(message).split(/(https?:\/\/[^\s]+)/g);parts.forEach(part=>{i
 const priceOf=p=>typeof p.raw.price==='number'?p.raw.price:p.base+((p.raw&&p.raw.noMarkup)?0:(window.SHOP.markup||0));
 const detail=p=>{last=p;let r=p.name+' — '+p.category+'\nGiá theo dữ liệu shop: '+fmt(priceOf(p))+'.';const d=p.raw.desc||p.raw.note||p.raw.eta||'';if(d)r+='\nThông tin: '+d;const g=groups.find(g=>g.name===p.category);if(g){if(g.desc)r+='\n'+g.desc;if(g.needs==='username')r+='\nKhi đặt cần Roblox username; không gửi mật khẩu cho bot.';}if(p.raw.isCustomDays)r+='\nGói tính theo số ngày; giá chính thức sẽ được tính theo lựa chọn của khách.';return r};
 const categories=[...new Set(groups.map(g=>g.name).filter(Boolean))];
-const byCategory=q=>{let matches=groups.filter(g=>norm(q).includes(norm(g.name))||norm(g.name).split(' ').filter(x=>x.length>3).every(x=>norm(q).includes(x)));if(/cay thue/.test(q))matches=groups.filter(g=>/cay thue|steal an egg/i.test(g.name));if(/gamepass/.test(q))matches=groups.filter(g=>/gamepass/i.test(g.name));if(/robux/.test(q))matches=groups.filter(g=>/robux/i.test(g.name));if(/trai|vinh vien/.test(q))matches=groups.filter(g=>/trai|vinh vien/i.test(g.name));if(!matches.length)return null;const ps=unique.filter(p=>matches.some(g=>p.category===g.name));return 'Shop có '+ps.length+' sản phẩm/gói thuộc '+[...new Set(matches.map(g=>g.name))].join(', ')+'.\n'+ps.slice(0,15).map(p=>'• '+p.name+': '+fmt(priceOf(p))).join('\n')+(ps.length>15?'\nBạn nói tên hoặc mức giá mong muốn, mình sẽ liệt kê tiếp.':'')};
+const byCategory=q=>{let matches=groups.filter(g=>norm(q).includes(norm(g.name))||norm(g.name).split(' ').filter(x=>x.length>3).every(x=>norm(q).includes(x)));if(/cay thue|booster/.test(q))matches=boostGroups;if(/gamepass/.test(q))matches=groups.filter(g=>/gamepass/i.test(g.name));if(/robux/.test(q))matches=groups.filter(g=>/robux/i.test(g.name));if(/trai|vinh vien/.test(q))matches=groups.filter(g=>/trai|vinh vien/i.test(g.name));if(!matches.length)return null;const ps=unique.filter(p=>matches.some(g=>p.category===g.name));return 'Shop có '+ps.length+' sản phẩm/gói thuộc '+[...new Set(matches.map(g=>g.name))].join(', ')+'.\n'+ps.slice(0,15).map(p=>'• '+p.name+': '+fmt(priceOf(p))).join('\n')+(ps.length>15?'\nBạn nói tên hoặc mức giá mong muốn, mình sẽ liệt kê tiếp.':'')};
 const answers={
 hello:'Chào bạn! Mình là Support 24/7 của BDShopVN. Bạn có thể hỏi giá, danh sách sản phẩm, cách mua, thanh toán, thời gian giao, bảo hành hoặc đơn hàng. Mình sẽ trả lời ngay theo dữ liệu shop.',
 buy:'Cách mua: 1) Chọn danh mục và sản phẩm. 2) Chọn số lượng hoặc tùy chọn nếu có. 3) Thêm vào giỏ hàng. 4) Mở giỏ hàng, kiểm tra sản phẩm và tổng tiền. 5) Điền thông tin giao hàng theo yêu cầu từng sản phẩm, chọn phương thức thanh toán và gửi đơn. 6) Theo dõi trạng thái trong lịch sử đơn hàng. Với Robux 120H, cần Roblox username, không cần mật khẩu.',
@@ -65,9 +68,13 @@ if(/thanh toan|chuyen khoan|the cao|nap tien|qr/.test(q))return answers.pay;
 if(/cach mua|dat hang|mua hang|gio hang/.test(q))return answers.buy;
 if(/mat khau|bao mat|otp|dang nhap/.test(q))return answers.account;
 if(/shop ban gi|danh muc|san pham nao/.test(q))return answers.categories;
+if(/cay thue|booster|thue acc/.test(q)&&!unique.some(p=>q.includes(norm(p.name))&&norm(p.name).length>14)){
+ const bd=window.BOOST&&window.BOOST.desc?window.BOOST.desc+'\n':'';
+ return 'Dịch vụ Cày thuê gồm '+boostGroups.length+' nhóm:\n'+boostGroups.map(g=>{const ps=unique.filter(p=>p.category===g.name).map(priceOf);const lo=Math.min(...ps),hi=Math.max(...ps);return '• '+(g.icon||'')+' '+g.name+' ('+ps.length+' gói'+(ps.length?', '+(lo===hi?fmt(lo):fmt(lo)+' – '+fmt(hi)):'')+')'}).join('\n')+'\n'+bd+'Bạn nhắn tên nhóm (vd: “Cày Level”, “Steal An Egg”) hoặc tên gói để mình báo chi tiết giá.';
+}
 const scored=unique.map(p=>{const n=norm(p.name),words=n.split(' ').filter(w=>w.length>2),tokens=q.split(' ');let score=q.includes(n)?100+n.length:0;if(!score&&words.length){let hits=words.filter(w=>tokens.includes(w)).length;if(hits>=Math.min(2,words.length))score=hits/words.length*30+hits}return {p,score}}).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
 if(scored.length){if(/so sanh/.test(q)&&scored.length>1)return scored.slice(0,4).map(x=>detail(x.p)).join('\n\n');return detail(scored[0].p)}
-if(last&&/^(gia|bao nhieu|mua sao|chi tiet|san pham nay|cai nay|loai nay|giao bao lau)/.test(q))return detail(last);
+if(last&&!/robux|120h|cay thue|booster/.test(q)&&/^(gia|bao nhieu|mua sao|chi tiet|san pham nay|cai nay|loai nay|giao bao lau)/.test(q))return detail(last);
 if(/robux|120h/.test(q))return answers.robux;
 const listing=byCategory(q);if(listing)return listing;
 if(/giao bao lau|mat bao lau|thoi gian giao/.test(q))return 'Robux 120H: dự kiến 120 giờ theo mô tả sản phẩm. Với các sản phẩm khác, thời gian hoàn thành phụ thuộc từng gói và ETA Admin cập nhật; dữ liệu hiện không có thời hạn chung để cam kết.';
