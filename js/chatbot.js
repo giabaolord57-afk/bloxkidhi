@@ -55,14 +55,27 @@ function aiContext(){
  const faqTxt=faqList.map(f=>'Hỏi: '+f.title+'\nĐáp: '+faqFill(f.a)).join('\n\n').slice(0,7000);
  return lines.join('\n').slice(0,6800)+'\n\n=== FAQ CỦA SHOP ===\n'+faqTxt}
 async function askAI(q){
- const dbx=window.BX_SUPABASE;if(!dbx||!window.SHOP.aiChat||Date.now()<aiOffUntil)return null;
+ const dbx=window.BX_SUPABASE;
+ if(!window.SHOP.aiChat)return {error:'Trợ lý AI hiện đang được tắt. Bạn có thể liên hệ Admin để được hỗ trợ.'};
+ if(!dbx)return {error:'Website chưa kết nối được Supabase nên chưa gọi được Gemini. Vui lòng tải lại trang hoặc liên hệ Admin.'};
+ if(Date.now()<aiOffUntil)return {error:'Gemini đang tạm ngắt sau lỗi kết nối. Vui lòng thử lại sau khoảng 1 phút hoặc bấm “☏ Gặp CSKH”.'};
+ let ctl,t;
  try{
-  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),22000);
-  const {data,error}=await dbx.functions.invoke('ai-chat',{body:{message:redact(q),context:aiContext(),history:aiHist.slice(-6)},signal:ctl.signal});clearTimeout(t);
-  if(error||!data||typeof data.reply!=='string'){aiOffUntil=Date.now()+60000;return null}
+  ctl=new AbortController();t=setTimeout(()=>ctl.abort(),22000);
+  const {data,error}=await dbx.functions.invoke('ai-chat',{body:{message:redact(q),context:aiContext(),history:aiHist.slice(-6)},signal:ctl.signal});
+  clearTimeout(t);
+  if(error||!data||typeof data.reply!=='string'){
+   aiOffUntil=Date.now()+60000;
+   const code=data&&data.error;
+   if(code==='rate'||code==='cap')return {error:'Gemini đang quá lượt sử dụng tạm thời. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
+   return {error:'Chưa kết nối được Gemini (có thể Edge Function chưa được deploy hoặc cấu hình API/CORS đang lỗi). Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
+  }
   aiHist.push({role:'user',text:redact(q)},{role:'model',text:data.reply});if(aiHist.length>12)aiHist.splice(0,2);
-  return data.reply;
- }catch(_){aiOffUntil=Date.now()+60000;return null}
+  return {reply:data.reply};
+ }catch(_){
+  if(t)clearTimeout(t);aiOffUntil=Date.now()+60000;
+  return {error:'Kết nối Gemini bị gián đoạn hoặc quá thời gian chờ. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
+ }
 }
 function append(who,message,imgUrl,ts){const staff=who==='staff';const row=document.createElement('div');row.className='cw-msg '+(staff?'bot staff':who);const avatar=document.createElement('span');avatar.className='cw-msg-av';avatar.textContent=staff?'🎧':who==='bot'?'🤖':'👤';const bubble=document.createElement('div');bubble.className='cw-bubble';// Chỉ tạo link từ URL cấu hình shop, không thực thi HTML từ tin nhắn.
 const parts=String(message).split(/(https?:\/\/[^\s]+)/g);parts.forEach(part=>{if(/^https?:\/\//.test(part)){const a=document.createElement('a');a.href=part;a.target='_blank';a.rel='noopener noreferrer';a.textContent=part;bubble.append(a)}else bubble.append(document.createTextNode(part))});if(imgUrl){const im=document.createElement('img');im.className='cw-img';im.alt='Ảnh';im.src=imgUrl;im.addEventListener('click',()=>window.open(imgUrl,'_blank','noopener'));im.addEventListener('load',()=>{body.scrollTop=body.scrollHeight});bubble.append(im)}const tm=document.createElement('span');tm.className='cw-time';tm.textContent=fmtTime(ts);bubble.append(tm);row.append(avatar,bubble);body.append(row);body.scrollTop=body.scrollHeight}
@@ -153,7 +166,12 @@ async function sendStaff(q){if(!q&&!pendingImg)return;const img=pendingImg;let p
 async function send(q){q=String(q||'').trim().slice(0,mode==='admin'?1000:500);if(!q&&!(mode==='admin'&&pendingImg))return;
  if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{sending=false;sendBtn.disabled=false}return}
  append('user',q);input.value='';const n=norm(q);let answer=!faqMatch(n)&&/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)?await orderReply(q):reply(q);
- if(answer===FALLBACK&&window.SHOP.aiChat&&!aiBusy){aiBusy=true;sendBtn.disabled=true;append('bot','Đang soạn câu trả lời…');const wait=body.lastElementChild;try{const ai=await askAI(q);if(ai)answer=ai}finally{aiBusy=false;sendBtn.disabled=false;if(wait&&wait.parentNode)wait.remove()}}
+ if(answer===FALLBACK&&window.SHOP.aiChat){
+  if(aiBusy){append('bot','Mình đang xử lý câu hỏi trước, bạn đợi một chút rồi gửi lại nhé.');return}
+  aiBusy=true;sendBtn.disabled=true;append('bot','Đang soạn câu trả lời…');const wait=body.lastElementChild;
+  try{const ai=await askAI(q);answer=(ai&&ai.reply)||((ai&&ai.error)||'Chưa nhận được phản hồi từ Gemini. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.')}
+  finally{aiBusy=false;sendBtn.disabled=false;if(wait&&wait.parentNode)wait.remove()}
+ }
  append('bot',answer)}
 
 // ===== Emoji, ảnh, "Đã giải quyết" + đánh giá sao =====
