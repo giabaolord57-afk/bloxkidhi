@@ -26,7 +26,7 @@ async function orderReply(question=''){
    if(error)return 'Chưa tải được lịch sử tài khoản. Admin cần chạy SETUP-BOT-LICH-SU-DON.sql trong Supabase. Bạn có thể xem đơn tại mục Tài khoản.';
    const orders=Array.isArray(data)?data:[];
    if(!orders.length)return 'Tài khoản này chưa có đơn được liên kết. Đơn cũ chưa gắn tài khoản vẫn có thể tra cứu bằng mã đơn và mã tra cứu trong mục Đơn hàng.';
-   const q=norm(question),code=(q.match(/(?:don|ma)\s*([a-z0-9-]{4,})/)||[])[1];
+   const q=norm(question),code=(q.match(/\b(bx[a-f0-9]{12})\b/i)||[])[1]?.toUpperCase();
    const selected=code?orders.filter(o=>norm(o.order_code)===code):orders;
    if(!selected.length)return 'Không tìm thấy mã đơn đó trong lịch sử tài khoản đang đăng nhập. Hãy kiểm tra lại mã đơn.';
    const show=/tat ca|lich su|nhung don|cac don|don nao|con don/.test(q)?selected.slice(0,10):selected.slice(0,5);
