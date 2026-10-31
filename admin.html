@@ -168,6 +168,47 @@
       color: var(--tx2);
     }
 
+
+    /* ===== CSKH chat ===== */
+    .sup-wrap { display:grid; grid-template-columns:300px 1fr; gap:14px; margin-top:14px; min-height:420px; }
+    .sup-list { border:1px solid var(--bd); border-radius:14px; background:rgba(10,14,24,.6); overflow-y:auto; max-height:520px; }
+    .sup-item { display:block; width:100%; text-align:left; padding:12px 14px; border:0; border-bottom:1px solid rgba(255,255,255,.08); background:transparent; color:var(--tx); cursor:pointer; font:inherit; }
+    .sup-item:hover, .sup-item.on { background:rgba(0,240,255,.07); }
+    .sup-item b { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+    .sup-item small { display:block; margin-top:3px; color:var(--tx3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sup-dot { min-width:20px; height:20px; padding:0 6px; border-radius:99px; background:#ef4444; color:#fff; font-size:.72rem; font-weight:800; display:inline-flex; align-items:center; justify-content:center; }
+    .sup-tag { font-size:.68rem; padding:2px 7px; border-radius:99px; font-weight:700; background:rgba(99,102,241,.25); color:#c7d2fe; }
+    .sup-tag.admin { background:rgba(16,185,129,.22); color:#6ee7b7; }
+    .sup-tag.closed { background:rgba(148,163,184,.2); color:#cbd5e1; }
+    .sup-pane { border:1px solid var(--bd); border-radius:14px; background:rgba(10,14,24,.6); display:flex; flex-direction:column; min-height:420px; max-height:520px; }
+    .sup-head { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08); }
+    .sup-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; }
+    .sup-m { max-width:78%; padding:9px 12px; border-radius:14px; white-space:pre-wrap; overflow-wrap:anywhere; font-size:.92rem; line-height:1.45; }
+    .sup-m.user { align-self:flex-start; background:#1e293b; border-bottom-left-radius:4px; }
+    .sup-m.admin { align-self:flex-end; background:#0e7490; color:#fff; border-bottom-right-radius:4px; }
+    .sup-m small { display:block; opacity:.6; font-size:.7rem; margin-top:3px; }
+    .sup-form { display:flex; gap:8px; padding:12px; border-top:1px solid rgba(255,255,255,.08); }
+    .sup-form textarea { flex:1; min-width:0; resize:none; margin:0; }
+    .sup-empty { margin:auto; color:var(--tx3); text-align:center; padding:20px; }
+    .sup-m img { display:block; max-width:100%; max-height:240px; border-radius:10px; margin-top:6px; cursor:zoom-in; }
+    .sup-m img:first-child { margin-top:0; }
+    .sup-form .btn { align-self:flex-end; }
+    .sup-quick { display:flex; flex-wrap:wrap; gap:6px; padding:8px 12px; border-top:1px solid rgba(255,255,255,.08); align-items:center; max-height:150px; overflow-y:auto; }
+    .sup-q { border:1px solid rgba(0,240,255,.35); background:rgba(0,240,255,.06); color:var(--tx); border-radius:99px; padding:5px 11px; font:inherit; font-size:.8rem; cursor:pointer; white-space:nowrap; }
+    .sup-q:hover { background:rgba(0,240,255,.16); }
+    .sup-q:disabled { opacity:.45; cursor:not-allowed; }
+    .sup-q.del::after { content:' ✕'; color:#fca5a5; font-weight:800; }
+    .sup-q.tool { border-style:dashed; color:var(--tx3); }
+    .sup-q-auto { font-size:.78rem; color:var(--tx3); display:inline-flex; align-items:center; gap:4px; margin-left:auto; }
+    .sup-prev { display:flex; align-items:center; gap:10px; padding:8px 12px; border-top:1px solid rgba(255,255,255,.08); font-size:.8rem; color:var(--tx3); }
+    .sup-prev img { width:44px; height:44px; object-fit:cover; border-radius:8px; }
+    .sup-prev[hidden], .sup-emoji[hidden] { display:none; }
+    .sup-emoji { display:grid; grid-template-columns:repeat(11,1fr); gap:2px; padding:8px 12px; border-top:1px solid rgba(255,255,255,.08); }
+    .sup-emoji button { border:0; background:transparent; font-size:20px; cursor:pointer; padding:3px 0; border-radius:6px; }
+    .sup-emoji button:hover { background:rgba(0,240,255,.12); }
+    .stars-on { color:#fbbf24; letter-spacing:1px; }
+    @media (max-width:760px) { .sup-wrap { grid-template-columns:1fr; } .sup-list { max-height:200px; } }
+
     .pw-result-box { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:260px; margin-top:8px; padding:10px; border:1px solid rgba(0,240,255,.35); border-radius:10px; background:rgba(0,240,255,.07); }
     .pw-result-box strong { flex-basis:100%; color:var(--ac); font-size:.85rem; }
     .pw-result-value { width:220px; max-width:100%; color:var(--tx) !important; background:rgba(0,0,0,.35) !important; }
@@ -201,6 +242,26 @@
         <button class="btn btn-p btn-s" id="refresh">🔄 Làm mới đơn</button>
       </div>
       <p id="message"></p>
+
+      <div class="card" id="supportCard">
+        <h2>💬 Chat hỗ trợ khách (CSKH) <span id="supUnread" class="sup-dot" style="display:none"></span></h2>
+        <p class="muted small">Khách bấm “Gặp CSKH” trong khung Support 24/7 sẽ xuất hiện ở đây. Trả lời tại đây, khách thấy ngay trong khung chat. Nhãn “AI” nghĩa là khách đã chuyển sang trợ lý tự động.</p>
+        <p id="supMessage" class="muted small"></p>
+        <div class="sup-wrap">
+          <div class="sup-list" id="supList"><div class="sup-empty">Đang tải...</div></div>
+          <div class="sup-pane">
+            <div class="sup-head"><div id="supTitle"><b>Chọn một cuộc trò chuyện</b></div><button class="btn btn-g btn-s" id="supToggle" hidden>Đóng hội thoại</button></div>
+            <div class="sup-msgs" id="supMsgs"><div class="sup-empty">Chưa chọn khách nào.</div></div>
+            <div class="sup-quick" id="supQuick"></div>
+            <div class="sup-prev" id="supPrev" hidden></div>
+            <div class="sup-emoji" id="supEmoji" hidden></div>
+            <form class="sup-form" id="supForm"><button type="button" class="btn btn-g btn-s" id="supEmojiBtn" title="Emoji" disabled>😊</button><button type="button" class="btn btn-g btn-s" id="supImgBtn" title="Gửi ảnh" disabled>📷</button><input type="file" id="supFile" accept="image/png,image/jpeg,image/webp,image/gif" hidden><textarea id="supInput" rows="2" maxlength="1000" placeholder="Nhập trả lời cho khách... (Enter để gửi, Shift+Enter xuống dòng)" disabled></textarea><button class="btn btn-p" id="supSend" disabled>Gửi</button></form>
+          </div>
+        </div>
+        <h3 style="margin:22px 0 4px">⭐ Đánh giá của khách <span id="supAvg" class="sup-tag admin"></span></h3>
+        <p class="muted small">Hiện khi khách bấm “Vấn đề đã được giải quyết” và chấm sao (cần chạy SETUP-CHAT-CSKH-V2.sql).</p>
+        <div class="scroll"><table><thead><tr><th>Thời gian</th><th>Khách</th><th>Đánh giá</th><th>Nhận xét</th></tr></thead><tbody id="supRatings"><tr><td colspan="4">Đang tải...</td></tr></tbody></table></div>
+      </div>
 
       <div class="card">
         <h2>📁 Quản lý danh mục acc</h2>
@@ -330,6 +391,7 @@
   <script src="js/supabase.js"></script>
   <script src="js/admin.js?v=18"></script>
   <script src="js/admin-payments.js?v=2"></script>
+  <script src="js/admin-support.js?v=3"></script>
   <script>window.addEventListener("error",function(e){if(e.target&&e.target.tagName==="SCRIPT"){var m=document.getElementById("message");if(m)m.textContent="Không tải được tệp JavaScript: "+(e.target.src||"");}},true);</script>
 </body>
 </html>

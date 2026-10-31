@@ -1,0 +1,17 @@
+CHAT CSKH TRONG KHUNG SUPPORT 24/7
+1. Supabase SQL Editor: chạy SETUP-CHAT-CSKH.sql (sau ADMIN-QUYEN-SUPABASE.sql và MIGRATION-TAI-KHOAN-SUPABASE.sql).
+2. Upload lại: index.html, admin.html, css/chatbot.css, js/chatbot.js, js/admin-support.js.
+3. Khách (đã đăng nhập): mở khung chat -> bấm "☏ Gặp CSKH" -> hệ thống gửi "Tôi cần gặp nhân viên hỗ trợ" và chuyển sang chat với Admin. Nút đổi thành "🤖 Hỏi AI"; bấm lại thì AI trả lời thay Admin (tin nhắn lúc dùng AI không gửi cho Admin).
+4. Admin: vào admin.html -> mục "Chat hỗ trợ khách (CSKH)" -> chọn khách, trả lời; khách thấy ngay trong khung chat. Có số tin chưa đọc, nhãn "Khách dùng AI", nút Đóng/Mở lại hội thoại.
+5. Realtime: SQL đã tự bật. Nếu chưa bật, hệ thống vẫn tự cập nhật mỗi 8-10 giây.
+6. Khách chưa đăng nhập: bot hướng dẫn đăng nhập (để Admin biết tài khoản/đơn của khách) và đưa link Zalo/Facebook.
+
+=== BẢN V2: EMOJI, ẢNH, ĐÁNH GIÁ SAO ===
+1. Supabase SQL Editor: chạy SETUP-CHAT-CSKH-V2.sql (sau SETUP-CHAT-CSKH.sql). File tạo kho ảnh riêng tư "support-images", bảng support_ratings và các hàm mới.
+2. Upload lại: index.html, admin.html, css/chatbot.css, js/chatbot.js, js/admin-support.js.
+3. Nút 😊 chèn emoji (dùng được cả khi chat với AI). Nút 📷 gửi ảnh (chỉ khi đang chat với nhân viên; có thể dán ảnh bằng Ctrl+V). Ảnh tự nén <= 1280px, khách chỉ xem được ảnh của hội thoại mình, Admin xem tất cả.
+4. Khi đang chat với nhân viên, nút "✅ Vấn đề đã được giải quyết" mở hộp chấm 1-5 sao ngay giữa khung chat, kèm ô nhận xét (không bắt buộc). Gửi xong: hội thoại được đóng, khách trở về chế độ Hỏi AI.
+5. Admin: đánh giá hiện thành một tin nhắn trong hội thoại và trong bảng "Đánh giá của khách" (kèm điểm trung bình). Admin cũng có nút emoji và gửi ảnh khi trả lời.
+
+=== TIN NHẮN NHANH CHO ADMIN ===
+Trong khung trả lời của admin.html có hàng nút mẫu (Chào, Chờ chút, Xin mã đơn, Xin ảnh/bill, Xin username, Đã nhận tiền, ...). Bấm nút = điền sẵn vào ô trả lời để sửa/gửi; tick "Bấm là gửi luôn" để gửi ngay. {ten} tự thay bằng tên khách. "✏️ Sửa" để xóa mẫu, "＋ Thêm mẫu" để tự thêm. Mẫu lưu trên trình duyệt của admin (không cần chạy SQL mới). Chỉ cần upload lại admin.html và js/admin-support.js.

@@ -41,8 +41,8 @@ async function orderReply(question=''){
   return 'Đơn '+data.code+' — '+data.status+' ('+orderStatus(data)+'). Dự kiến: '+etaText(data)+'. Đăng nhập để xem toàn bộ lịch sử đơn liên kết tài khoản.';
  }catch(_){return 'Không thể tải lịch sử đơn lúc này. Vui lòng thử lại sau.';}
 }
-function append(who,message){const row=document.createElement('div');row.className='cw-msg '+who;const avatar=document.createElement('span');avatar.className='cw-msg-av';avatar.textContent=who==='bot'?'🤖':'👤';const bubble=document.createElement('div');bubble.className='cw-bubble';// Chỉ tạo link từ URL cấu hình shop, không thực thi HTML từ tin nhắn.
-const parts=String(message).split(/(https?:\/\/[^\s]+)/g);parts.forEach(part=>{if(/^https?:\/\//.test(part)){const a=document.createElement('a');a.href=part;a.target='_blank';a.rel='noopener noreferrer';a.textContent=part;bubble.append(a)}else bubble.append(document.createTextNode(part))});row.append(avatar,bubble);body.append(row);body.scrollTop=body.scrollHeight}
+function append(who,message,imgUrl){const staff=who==='staff';const row=document.createElement('div');row.className='cw-msg '+(staff?'bot staff':who);const avatar=document.createElement('span');avatar.className='cw-msg-av';avatar.textContent=staff?'🎧':who==='bot'?'🤖':'👤';const bubble=document.createElement('div');bubble.className='cw-bubble';// Chỉ tạo link từ URL cấu hình shop, không thực thi HTML từ tin nhắn.
+const parts=String(message).split(/(https?:\/\/[^\s]+)/g);parts.forEach(part=>{if(/^https?:\/\//.test(part)){const a=document.createElement('a');a.href=part;a.target='_blank';a.rel='noopener noreferrer';a.textContent=part;bubble.append(a)}else bubble.append(document.createTextNode(part))});if(imgUrl){const im=document.createElement('img');im.className='cw-img';im.alt='Ảnh';im.src=imgUrl;im.addEventListener('click',()=>window.open(imgUrl,'_blank','noopener'));im.addEventListener('load',()=>{body.scrollTop=body.scrollHeight});bubble.append(im)}row.append(avatar,bubble);body.append(row);body.scrollTop=body.scrollHeight}
 const priceOf=p=>typeof p.raw.price==='number'?p.raw.price:p.base+((p.raw&&p.raw.noMarkup)?0:(window.SHOP.markup||0));
 const detail=p=>{last=p;let r=p.name+' — '+p.category+'\nGiá theo dữ liệu shop: '+fmt(priceOf(p))+'.';const d=p.raw.desc||p.raw.note||p.raw.eta||'';if(d)r+='\nThông tin: '+d;const g=groups.find(g=>g.name===p.category);if(g){if(g.desc)r+='\n'+g.desc;if(g.needs==='username')r+='\nKhi đặt cần Roblox username; không gửi mật khẩu cho bot.';}if(p.raw.isCustomDays)r+='\nGói tính theo số ngày; giá chính thức sẽ được tính theo lựa chọn của khách.';return r};
 const categories=[...new Set(groups.map(g=>g.name).filter(Boolean))];
@@ -73,8 +73,92 @@ const listing=byCategory(q);if(listing)return listing;
 if(/giao bao lau|mat bao lau|thoi gian giao/.test(q))return 'Robux 120H: dự kiến 120 giờ theo mô tả sản phẩm. Với các sản phẩm khác, thời gian hoàn thành phụ thuộc từng gói và ETA Admin cập nhật; dữ liệu hiện không có thời hạn chung để cam kết.';
 return 'Mình chưa xác định chính xác sản phẩm hoặc vấn đề bạn muốn hỏi. Bạn có thể nhắn tên sản phẩm, “liệt kê giá Robux”, “cày thuê có gì”, “cách mua”, “thanh toán” hoặc “lịch sử đơn hàng”. Mình sẽ trả lời chi tiết ngay trong chat; thông tin chưa có trong dữ liệu shop mình sẽ nói rõ.';
 }
-async function send(q){q=String(q||'').trim().slice(0,500);if(!q)return;append('user',q);input.value='';const n=norm(q);const answer=/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)?await orderReply(q):reply(q);append('bot',answer)}
-const prompts=['Shop bán gì?','Cách mua hàng','Bảng giá Robux','Cày thuê có gì?','Gamepass có gì?','Thanh toán','Lịch sử đơn hàng','Liên hệ admin'];prompts.forEach(t=>{const b=document.createElement('button');b.className='cw-chip';b.textContent=t;b.addEventListener('click',()=>send(t));quick.append(b)});
-function open(){panel.classList.add('open');fab.classList.add('hidden');if(!started){started=true;append('bot',answers.hello+' Bạn có thể chọn câu hỏi nhanh bên dưới nhé.')}input.focus()}
-fab.addEventListener('click',open);$('chatClose').addEventListener('click',()=>{panel.classList.remove('open');fab.classList.remove('hidden')});$('cwSend').addEventListener('click',()=>send(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value)}});
+// ===== CSKH: chat trực tiếp với Admin (Supabase) — nút "Gặp CSKH" <-> "Hỏi AI" =====
+const STAFF_TEXT='Tôi cần gặp nhân viên hỗ trợ';
+const db=window.BX_SUPABASE,statusEl=panel.querySelector('.cw-status'),badge=fab.querySelector('.chat-fab-badge'),sendBtn=$('cwSend');
+let pendingImg=null,mode='ai',chat=null,lastId=0,channel=null,poller=null,historyLoaded=false,busyStaff=false,unread=0,sending=false;
+const staffBtn=document.createElement('button');staffBtn.className='cw-chip cw-chip-staff';staffBtn.type='button';
+function renderMode(){const m=mode==='admin';resolveBtn.hidden=!m;imgBtn.hidden=!m;if(!m)clearImg();staffBtn.textContent=m?'🤖 Hỏi AI':'☏ Gặp CSKH';staffBtn.title=m?'Quay lại trợ lý AI':'Chat trực tiếp với nhân viên hỗ trợ';
+ panel.classList.toggle('cw-staff-mode',m);if(statusEl)statusEl.textContent=m?'● Đang chat với nhân viên CSKH':'● Trợ lý tự động BDShopVN';
+ input.placeholder=m?'Nhắn cho nhân viên CSKH...':'Nhập câu hỏi...'}
+const isOpen=()=>panel.classList.contains('open');
+function setBadge(n){unread=n;if(!badge)return;if(n>0){badge.textContent=n>9?'9+':String(n);badge.style.display=''}else badge.style.display='none'}
+async function getUser(){if(!db)return null;try{const {data:{session}}=await db.auth.getSession();return session?session.user:null}catch(_){return null}}
+const signed=async path=>{try{const {data}=await db.storage.from('support-images').createSignedUrl(path,3600);return data&&data.signedUrl||null}catch(_){return null}};
+const userName=u=>String((u&&u.email)||'').split('@')[0]||'khach';
+async function markRead(){if(!db||!chat)return;try{await db.rpc('support_mark_read_user')}catch(_){}}
+// Chỉ vẽ tin của nhân viên; tin của khách đã được vẽ ngay lúc gửi (tránh trùng).
+async function pull(){if(!db||!chat)return;try{const {data,error}=await db.from('support_messages').select('id,sender,body,image_path').eq('chat_id',chat.id).gt('id',lastId).order('id',{ascending:true}).limit(50);if(error||!data||!data.length)return;let fresh=0;for(const m of data){lastId=Math.max(lastId,m.id);if(m.sender==='admin'){append('staff',m.body,m.image_path?await signed(m.image_path):null);fresh++}}if(fresh){if(isOpen())markRead();else setBadge(unread+fresh)}}catch(_){}}
+function listen(){if(!db||!chat||channel)return;try{channel=db.channel('support-'+chat.id).on('postgres_changes',{event:'INSERT',schema:'public',table:'support_messages',filter:'chat_id=eq.'+chat.id},()=>pull()).subscribe()}catch(_){}
+ poller=setInterval(()=>{if(document.hidden)return;pull()},8000)}
+function stopListen(){if(channel&&db){try{db.removeChannel(channel)}catch(_){}}channel=null;if(poller)clearInterval(poller);poller=null}
+async function loadHistory(){if(historyLoaded||!chat)return;historyLoaded=true;try{const {data}=await db.from('support_messages').select('id,sender,body,image_path').eq('chat_id',chat.id).order('id',{ascending:false}).limit(50);for(const m of (data||[]).reverse()){lastId=Math.max(lastId,m.id);append(m.sender==='admin'?'staff':'user',m.body,m.image_path?await signed(m.image_path):null)}if((data||[]).length)append('bot',mode==='admin'?'— Đây là lịch sử trò chuyện với CSKH. Nhân viên sẽ trả lời ngay tại đây. —':'— Lịch sử trò chuyện với CSKH ở trên. Bạn đang dùng trợ lý AI; bấm “Gặp CSKH” để nhắn nhân viên. —')}catch(_){}}
+async function initSupport(){renderMode();const u=await getUser();if(!u){stopListen();chat=null;mode='ai';historyLoaded=false;lastId=0;renderMode();return}
+ try{const {data}=await db.from('support_chats').select('*').eq('user_id',u.id).maybeSingle();if(data){chat=data;mode=data.mode==='admin'?'admin':'ai';setBadge(data.unread_user||0);if(started)loadHistory();listen()}}catch(_){}renderMode()}
+function failStaff(){append('bot','Chưa kết nối được kênh CSKH trực tuyến (Admin cần chạy SETUP-CHAT-CSKH.sql trong Supabase). Bạn có thể liên hệ trực tiếp:\n'+answers.contact)}
+async function requestStaff(){if(busyStaff)return;busyStaff=true;staffBtn.disabled=true;
+ try{append('user',STAFF_TEXT);const u=await getUser();
+  if(!u){append('bot','Để chat với nhân viên CSKH, bạn cần đăng nhập để Admin nhận diện đúng tài khoản và đơn hàng của bạn.\nĐăng nhập tại: '+new URL('tai-khoan.html',location.href).href+'\nHoặc liên hệ nhanh:\n'+answers.contact);return}
+  const {data,error}=await db.rpc('support_open_chat',{p_username:userName(u)});if(error||!data){failStaff();return}
+  const first=!chat;chat=Array.isArray(data)?data[0]:data;mode='admin';
+  const {data:mid,error:e2}=await db.rpc('support_send_message',{p_body:STAFF_TEXT});if(e2){mode='ai';renderMode();failStaff();return}
+  if(typeof mid==='number')lastId=Math.max(lastId,mid);historyLoaded=true;listen();renderMode();
+  append('bot','Đã gửi yêu cầu tới nhân viên CSKH. Bạn cứ nhắn nội dung cần hỗ trợ ngay trong khung chat này, Admin sẽ trả lời trực tiếp tại đây. Muốn hỏi trợ lý tự động, bấm “🤖 Hỏi AI”.')
+ }finally{busyStaff=false;staffBtn.disabled=false;renderMode()}}
+async function backToAI(){mode='ai';renderMode();if(db&&chat){try{await db.rpc('support_set_mode',{p_mode:'ai'})}catch(_){}}append('bot','Đã chuyển sang Hỏi AI. Từ giờ trợ lý tự động sẽ trả lời bạn thay cho nhân viên. Cần gặp nhân viên, bấm “☏ Gặp CSKH” nhé.')}
+staffBtn.addEventListener('click',()=>mode==='admin'?backToAI():requestStaff());
+async function sendStaff(q){if(!q&&!pendingImg)return;const img=pendingImg;let path=null;
+ if(img){try{path=chat.id+'/'+(crypto.randomUUID?crypto.randomUUID():Date.now()+''+Math.random().toString(16).slice(2))+'.jpg';const {error:ue}=await db.storage.from('support-images').upload(path,img.blob,{contentType:'image/jpeg'});if(ue)throw ue}catch(e){append('bot','Chưa tải được ảnh lên: '+((e&&e.message)||'lỗi')+'. Admin cần chạy SETUP-CHAT-CSKH-V2.sql trong Supabase.');return}}
+ const {data,error}=await db.rpc('support_send_message',{p_body:q,p_image_path:path});
+ if(error){append('bot','Chưa gửi được tin nhắn tới nhân viên: '+(error.message||'lỗi kết nối')+'. Vui lòng thử lại hoặc bấm “🤖 Hỏi AI”.');return}
+ append('user',q,img?img.url:null);input.value='';clearImg();if(typeof data==='number')lastId=Math.max(lastId,data)}
+async function send(q){q=String(q||'').trim().slice(0,mode==='admin'?1000:500);if(!q&&!(mode==='admin'&&pendingImg))return;
+ if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{sending=false;sendBtn.disabled=false}return}
+ append('user',q);input.value='';const n=norm(q);const answer=/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)?await orderReply(q):reply(q);append('bot',answer)}
+
+// ===== Emoji, ảnh, "Đã giải quyết" + đánh giá sao =====
+const row=panel.querySelector('.cw-input-row');
+const mkBtn=(cls,txt,title)=>{const b=document.createElement('button');b.type='button';b.className='cw-tool '+cls;b.textContent=txt;b.title=title;b.setAttribute('aria-label',title);return b};
+const emojiBtn=mkBtn('cw-emoji-btn','😊','Chèn emoji'),imgBtn=mkBtn('cw-img-btn','📷','Gửi ảnh cho nhân viên');
+const file=document.createElement('input');file.type='file';file.accept='image/png,image/jpeg,image/webp,image/gif';file.hidden=true;
+row.insertBefore(imgBtn,input);row.insertBefore(emojiBtn,imgBtn);row.append(file);
+const prev=document.createElement('div');prev.className='cw-preview';prev.hidden=true;row.parentNode.insertBefore(prev,row);
+const EMOJIS='😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😎 🤩 🥳 😢 😭 😡 😱 🤔 🙄 😴 👍 👎 👏 🙏 💪 🔥 ❤️ 💔 ✨ 🎉 🎁 💎 ⭐ ✅ ❌ 🎮 🍎 💰 🛒'.split(' ');
+const pop=document.createElement('div');pop.className='cw-emoji-pop';pop.hidden=true;
+EMOJIS.forEach(e=>{const b=document.createElement('button');b.type='button';b.textContent=e;b.addEventListener('click',()=>{const a=input.selectionStart??input.value.length,z=input.selectionEnd??a;input.value=input.value.slice(0,a)+e+input.value.slice(z);const pos=a+e.length;input.focus();input.setSelectionRange(pos,pos)});pop.append(b)});
+row.parentNode.insertBefore(pop,row);
+emojiBtn.addEventListener('click',e=>{e.stopPropagation();pop.hidden=!pop.hidden});
+panel.addEventListener('click',e=>{if(!pop.hidden&&!pop.contains(e.target)&&e.target!==emojiBtn)pop.hidden=true});
+function clearImg(){if(pendingImg){URL.revokeObjectURL(pendingImg.url);pendingImg=null}if(typeof prev!=='undefined'){prev.hidden=true;prev.textContent=''}file.value=''}
+function compress(f){return new Promise((ok,no)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{URL.revokeObjectURL(u);const k=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);c.toBlob(b=>b?ok(b):no(new Error('Không xử lý được ảnh')),'image/jpeg',.82)};im.onerror=()=>{URL.revokeObjectURL(u);no(new Error('Tệp không phải ảnh hợp lệ'))};im.src=u})}
+imgBtn.addEventListener('click',()=>file.click());
+file.addEventListener('change',async()=>{const f=file.files&&file.files[0];if(!f)return;if(!/^image\//.test(f.type)||f.size>10*1024*1024){append('bot','Chỉ gửi được ảnh (PNG/JPG/WebP/GIF) tối đa 10MB.');file.value='';return}
+ try{const blob=await compress(f);clearImg();pendingImg={blob,url:URL.createObjectURL(blob)};prev.hidden=false;prev.textContent='';const im=document.createElement('img');im.src=pendingImg.url;im.alt='Ảnh sẽ gửi';const x=document.createElement('button');x.type='button';x.textContent='✕';x.title='Bỏ ảnh';x.addEventListener('click',clearImg);const t=document.createElement('span');t.textContent='Ảnh sẽ gửi cùng tin nhắn';prev.append(im,t,x)}catch(e){append('bot',(e&&e.message)||'Không đọc được ảnh.')}});
+input.addEventListener('paste',e=>{if(mode!=='admin')return;const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it){e.preventDefault();const dt=new DataTransfer();dt.items.add(it.getAsFile());file.files=dt.files;file.dispatchEvent(new Event('change'))}});
+
+// Nút "Vấn đề đã được giải quyết" -> hộp đánh giá sao ngay giữa khung chat
+const resolveBtn=document.createElement('button');resolveBtn.type='button';resolveBtn.className='cw-chip cw-chip-resolve';resolveBtn.textContent='✅ Vấn đề đã được giải quyết';resolveBtn.hidden=true;
+const modal=document.createElement('div');modal.className='cw-modal';modal.hidden=true;modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');
+modal.innerHTML='<div class="cw-modal-card"><div class="cw-modal-title">Vấn đề đã được giải quyết?</div><div class="cw-modal-sub">Bạn đánh giá lần hỗ trợ này thế nào?</div><div class="cw-stars" role="radiogroup" aria-label="Số sao"></div><div class="cw-star-label"> </div><textarea class="cw-modal-text" rows="3" maxlength="500" placeholder="Gửi đánh giá cho nhân viên bằng tin nhắn (không bắt buộc)..."></textarea><div class="cw-modal-err"></div><div class="cw-modal-actions"><button type="button" class="cw-modal-cancel">Chưa xong</button><button type="button" class="cw-modal-ok" disabled>Gửi đánh giá</button></div></div>';
+panel.append(modal);
+const starsBox=modal.querySelector('.cw-stars'),starLbl=modal.querySelector('.cw-star-label'),txt=modal.querySelector('.cw-modal-text'),okBtn=modal.querySelector('.cw-modal-ok'),errEl=modal.querySelector('.cw-modal-err');
+const LABELS=['Rất tệ','Chưa tốt','Bình thường','Tốt','Rất hài lòng'];let stars=0;
+const paint=n=>{[...starsBox.children].forEach((b,i)=>b.classList.toggle('on',i<n));starLbl.textContent=n?n+'/5 — '+LABELS[n-1]:' '};
+for(let i=1;i<=5;i++){const b=document.createElement('button');b.type='button';b.textContent='★';b.setAttribute('role','radio');b.setAttribute('aria-label',i+' sao');b.addEventListener('mouseenter',()=>paint(i));b.addEventListener('focus',()=>paint(i));b.addEventListener('click',()=>{stars=i;paint(i);okBtn.disabled=false});starsBox.append(b)}
+starsBox.addEventListener('mouseleave',()=>paint(stars));
+const closeModal=()=>{modal.hidden=true};
+resolveBtn.addEventListener('click',()=>{if(!chat)return;stars=0;paint(0);txt.value='';errEl.textContent='';okBtn.disabled=true;okBtn.textContent='Gửi đánh giá';modal.hidden=false});
+modal.querySelector('.cw-modal-cancel').addEventListener('click',closeModal);
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal()});
+okBtn.addEventListener('click',async()=>{if(!stars)return;okBtn.disabled=true;okBtn.textContent='Đang gửi...';errEl.textContent='';const c=txt.value.trim();
+ const {error}=await db.rpc('support_resolve',{p_rating:stars,p_comment:c});
+ if(error){errEl.textContent='Chưa gửi được: '+(error.message||'lỗi')+(/support_resolve|schema cache|does not exist/i.test(error.message||'')?' (Admin cần chạy SETUP-CHAT-CSKH-V2.sql)':'');okBtn.disabled=false;okBtn.textContent='Gửi đánh giá';return}
+ closeModal();append('user','✅ Vấn đề đã được giải quyết\nĐánh giá: '+'★'.repeat(stars)+'☆'.repeat(5-stars)+' ('+stars+'/5)'+(c?'\n“'+c+'”':''));
+ mode='ai';renderMode();append('bot','Cảm ơn bạn đã đánh giá '+stars+'★! Phản hồi đã được gửi tới nhân viên CSKH. Mình đã chuyển bạn về trợ lý AI; cần gặp nhân viên lần nữa, bấm “☏ Gặp CSKH” nhé.')});
+quick.append(staffBtn,resolveBtn);
+const prompts=['Shop bán gì?','Cách mua hàng','Bảng giá Robux','Cày thuê có gì?','Gamepass có gì?','Thanh toán','Lịch sử đơn hàng','Liên hệ admin'];prompts.forEach(t=>{const b=document.createElement('button');b.className='cw-chip';b.textContent=t;b.addEventListener('click',()=>{if(mode==='admin')backToAI().then(()=>send(t));else send(t)});quick.append(b)});
+function open(){panel.classList.add('open');fab.classList.add('hidden');if(!started){started=true;append('bot',answers.hello+' Bạn có thể chọn câu hỏi nhanh bên dưới, hoặc bấm “☏ Gặp CSKH” để chat với nhân viên.');loadHistory()}setBadge(0);if(chat)markRead();input.focus()}
+fab.addEventListener('click',open);$('chatClose').addEventListener('click',()=>{panel.classList.remove('open');fab.classList.remove('hidden')});sendBtn.addEventListener('click',()=>send(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value)}});
+renderMode();initSupport();if(db)db.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_IN'||ev==='SIGNED_OUT')setTimeout(initSupport,0)});
 })();
