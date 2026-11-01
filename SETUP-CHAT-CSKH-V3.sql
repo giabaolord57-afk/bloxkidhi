@@ -9,6 +9,36 @@ ALTER TABLE public.support_messages ADD COLUMN IF NOT EXISTS session_no int NOT 
 ALTER TABLE public.support_ratings  ADD COLUMN IF NOT EXISTS session_no int NOT NULL DEFAULT 1;
 CREATE INDEX IF NOT EXISTS support_messages_session_idx ON public.support_messages(chat_id, session_no, id);
 
+
+-- Trạng thái CSKH toàn cục: khách chưa đăng nhập cũng xem được.
+CREATE TABLE IF NOT EXISTS public.support_presence (
+  id boolean PRIMARY KEY DEFAULT true CHECK (id = true),
+  status text NOT NULL DEFAULT 'online' CHECK (status IN ('online','away')),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  updated_by uuid REFERENCES auth.users(id)
+);
+INSERT INTO public.support_presence(id,status) VALUES (true,'online')
+ON CONFLICT (id) DO NOTHING;
+ALTER TABLE public.support_presence ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.support_presence FROM anon, authenticated;
+GRANT SELECT ON TABLE public.support_presence TO anon, authenticated;
+DROP POLICY IF EXISTS "Anyone can read CSKH presence" ON public.support_presence;
+CREATE POLICY "Anyone can read CSKH presence" ON public.support_presence
+  FOR SELECT TO anon, authenticated USING (true);
+
+CREATE OR REPLACE FUNCTION public.support_set_presence(p_status text)
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $
+BEGIN
+  IF NOT public.is_bloxshop_admin() THEN RAISE EXCEPTION 'Không có quyền Admin'; END IF;
+  IF p_status NOT IN ('online','away') THEN RAISE EXCEPTION 'Trạng thái không hợp lệ'; END IF;
+  UPDATE public.support_presence
+  SET status=p_status, updated_at=now(), updated_by=auth.uid()
+  WHERE id=true;
+  RETURN p_status;
+END $;
+REVOKE ALL ON FUNCTION public.support_set_presence(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.support_set_presence(text) TO authenticated;
+
 -- Tin của khách: gắn vào phiên hiện tại
 CREATE OR REPLACE FUNCTION public.support_send_message(p_body text, p_image_path text DEFAULT NULL)
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
