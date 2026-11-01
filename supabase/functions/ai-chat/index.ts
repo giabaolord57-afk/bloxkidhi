@@ -6,12 +6,13 @@ const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
 const DAILY_CAP = Number(Deno.env.get("AI_DAILY_CAP") ?? "900");   // tổng lượt/ngày toàn shop (giữ dưới hạn mức miễn phí)
 const IP_PER_MIN = Number(Deno.env.get("AI_IP_PER_MIN") ?? "6");
 const IP_PER_DAY = Number(Deno.env.get("AI_IP_PER_DAY") ?? "50");
-const ALLOW_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";        // đặt = https://ten-mien-cua-ban để chỉ web bạn gọi được
+const ALLOW_ORIGIN = "https://bdshopvn.vercel.app"; // Domain website đang chạy thực tế của BDShopVN
 
 const cors = {
   "Access-Control-Allow-Origin": ALLOW_ORIGIN,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Vary": "Origin",
 };
 const json = (o: unknown, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { ...cors, "content-type": "application/json" } });
