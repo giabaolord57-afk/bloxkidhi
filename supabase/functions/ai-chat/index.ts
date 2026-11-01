@@ -91,24 +91,50 @@ Deno.serve(async (req) => {
     .map((h: any) => ({ role: h.role, parts: [{ text: h.text.slice(0, 600) }] }));
   contents.push({ role: "user", parts: [{ text: message }] });
 
-  try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": GEMINI_KEY },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM + "\n\n=== DỮ LIỆU SHOP (chỉ để tham khảo) ===\n" + context }] },
-        contents,
-        generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!r.ok) { const detail = (await r.text()).slice(0, 500); console.error("gemini upstream:", r.status, detail); return json({ error: "gemini_upstream", status: r.status }, 502); }
-    const d = await r.json();
-    const text = (d?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? "").join("").trim();
-    if (!text) return json({ error: "empty reply" }, 502);
-    return json({ reply: text.slice(0, 1200) });
-  } catch (e) {
-    console.error("ai-chat", e);
-    return json({ error: "upstream" }, 502);
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const payload = {
+    systemInstruction: { parts: [{ text: SYSTEM + "\n\n=== DỮ LIỆU SHOP (chỉ để tham khảo) ===\n" + context }] },
+    contents,
+    generationConfig: { maxOutputTokens: 500, temperature: 0.3 },
+  };
+
+  // Gemini đôi lúc trả 503/429 khi quá tải. Tự thử lại tối đa 3 lần.
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": GEMINI_KEY },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20_000),
+      });
+
+      if (r.ok) {
+        const d = await r.json();
+        const reply = (d?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? "").join("").trim();
+        if (!reply) return json({ error: "empty reply" }, 502);
+        return json({ reply: reply.slice(0, 1200) });
+      }
+
+      const detail = (await r.text()).slice(0, 500);
+      const retryable = r.status === 429 || r.status === 500 || r.status === 502 || r.status === 503 || r.status === 504;
+      if (!retryable || attempt === 2) {
+        console.error("gemini upstream:", r.status, detail);
+        return json({ error: "gemini_upstream", status: r.status }, 502);
+      }
+      console.warn(`Gemini tạm quá tải (HTTP ${r.status}), thử lại lần ${attempt + 2}/3`);
+    } catch (e) {
+      lastError = e;
+      if (attempt === 2) {
+        console.error("ai-chat network:", e instanceof Error ? e.message : String(e));
+        return json({ error: "upstream" }, 502);
+      }
+      console.warn(`Gemini kết nối lỗi, thử lại lần ${attempt + 2}/3`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 700 * (2 ** attempt) + Math.floor(Math.random() * 300)));
   }
+
+  console.error("ai-chat retries exhausted:", lastError);
+  return json({ error: "upstream" }, 502);
 });
