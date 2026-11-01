@@ -133,7 +133,7 @@ function renderMode(){const m=mode==='admin';resolveBtn.style.display=(m&&sentIn
  panel.classList.toggle('cw-staff-mode',m);if(statusEl)statusEl.textContent=m?'● Đang chat với nhân viên CSKH':'● Trợ lý tự động BDShopVN';
  input.placeholder=m?'Nhắn cho nhân viên CSKH...':'Nhập câu hỏi...'}
 const isOpen=()=>panel.classList.contains('open');
-function setBadge(n){unread=n;if(!badge)return;if(n>0){badge.textContent=n>9?'9+':String(n);badge.style.display=''}else badge.style.display='none'}
+function setBadge(n){unread=n;if(!badge)return;badge.style.display=n>0?'block':'none'}
 async function getUser(){if(!db)return null;try{const {data:{session}}=await db.auth.getSession();return session?session.user:null}catch(_){return null}}
 const signed=async path=>{try{const {data}=await db.storage.from('support-images').createSignedUrl(path,3600);return data&&data.signedUrl||null}catch(_){return null}};
 const userName=u=>String((u&&u.email)||'').split('@')[0]||'khach';
