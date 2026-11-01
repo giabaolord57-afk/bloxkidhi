@@ -2,7 +2,7 @@
 (()=>{'use strict';
 const db=window.BX_SUPABASE,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 if(!db||!$('supportCard'))return;
-let pending=null,chats=[],cur=null,lastId=0,started=false,listBusy=false,sending=false,channel=null,pulling=false,pullAgain=false;
+let pending=null,chats=[],cur=null,lastId=0,started=false,listBusy=false,sending=false,channel=null,pulling=false,pullAgain=false,presence='online',presencePoll=null;
 const time=t=>new Date(t).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
 const say=t=>{$('supMessage').textContent=t||''};
 const needSql=e=>/support_|relation|schema cache|does not exist/i.test(e&&e.message||'')?'Cần chạy SETUP-CHAT-CSKH.sql trong Supabase SQL Editor. ('+e.message+')':(e&&e.message)||'Lỗi';
@@ -15,6 +15,17 @@ async function loadChats(){
     if(cur){const c=chats.find(x=>x.id===cur.id);if(c){cur=c;renderHead()}}
   }finally{listBusy=false}
 }
+// Trạng thái CSKH dùng chung cho mọi khách truy cập.
+const presenceBox=document.createElement('div');presenceBox.className='sup-presence-admin';presenceBox.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;margin-bottom:8px;border-bottom:1px solid rgba(148,163,184,.2)';
+presenceBox.innerHTML='<strong style="font-size:13px">Trạng thái hiển thị với khách:</strong>';
+const presenceBtns={online:document.createElement('button'),away:document.createElement('button')};
+presenceBtns.online.type=presenceBtns.away.type='button';
+presenceBtns.online.textContent='🟢 CSKH đang online';presenceBtns.away.textContent='🟠 CSKH tạm vắng';
+Object.entries(presenceBtns).forEach(([key,btn])=>{btn.style.cssText='border:1px solid #64748b;border-radius:20px;padding:7px 11px;background:transparent;color:inherit;cursor:pointer;font-size:12px';btn.addEventListener('click',()=>setPresence(key));presenceBox.append(btn)});
+const listParent=$('supList').parentNode;listParent.insertBefore(presenceBox,$('supList'));
+function paintPresence(){Object.entries(presenceBtns).forEach(([key,btn])=>{btn.style.fontWeight=presence===key?'700':'400';btn.style.borderColor=presence===key?(key==='online'?'#16a34a':'#d97706'):'#64748b';btn.style.background=presence===key?(key==='online'?'rgba(22,163,74,.12)':'rgba(217,119,6,.12)'):'transparent'})}
+async function loadPresence(){const {data,error}=await db.from('support_presence').select('status').eq('id',true).maybeSingle();if(!error&&data){presence=data.status==='away'?'away':'online';paintPresence()}}
+async function setPresence(value){const {error}=await db.rpc('support_set_presence',{p_status:value});if(error){say(needSql(error));return}presence=value;paintPresence();say(value==='online'?'Đã đặt CSKH đang online.':'Đã đặt CSKH tạm vắng.')}
 function renderList(){
   const total=chats.reduce((n,c)=>n+(c.unread_admin||0),0),u=$('supUnread');
   u.style.display=total?'':'none';u.textContent=total;const tb=$('tabSupUnread');if(tb){tb.style.display=total?'':'none';tb.textContent=total}
@@ -138,7 +149,7 @@ function listen(){
   try{channel=db.channel('support-admin').on('postgres_changes',{event:'*',schema:'public',table:'support_messages'},()=>{loadChats();pull(false)}).on('postgres_changes',{event:'*',schema:'public',table:'support_chats'},()=>loadChats()).subscribe()}catch(_){}
 }
 function start(){
-  if(started)return;started=true;loadChats();listen();
+  if(started)return;started=true;loadChats();listen();loadPresence();presencePoll=setInterval(()=>{if(!document.hidden)loadPresence()},15000);
   setInterval(()=>{if(document.hidden)return;loadChats();pull(false)},10000); // dự phòng khi Realtime chưa bật
 }
 $('supList').addEventListener('click',e=>{const b=e.target.closest('[data-chat]');if(b)select(b.dataset.chat)});
