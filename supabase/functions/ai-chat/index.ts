@@ -81,67 +81,126 @@ Deno.serve(async (req) => {
     console.error("rate-limit disabled: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
   }
 
-  // ---- gọi Gemini ----
-  if (!GEMINI_KEY) {
-    console.error("Gemini configuration: missing GEMINI_API_KEY secret");
-    return json({ error: "gemini_config" }, 503);
-  }
+  // ---- chuẩn bị hội thoại dùng chung cho Gemini và Groq ----
   const contents = history
     .filter((h: any) => h && (h.role === "user" || h.role === "model") && typeof h.text === "string")
     .map((h: any) => ({ role: h.role, parts: [{ text: h.text.slice(0, 600) }] }));
   contents.push({ role: "user", parts: [{ text: message }] });
 
+  const systemPrompt = SYSTEM + "\n\n=== DỮ LIỆU SHOP (chỉ để tham khảo) ===\n" + context;
   const payload = {
-    systemInstruction: { parts: [{ text: SYSTEM + "\n\n=== DỮ LIỆU SHOP (chỉ để tham khảo) ===\n" + context }] },
+    systemInstruction: { parts: [{ text: systemPrompt }] },
     contents,
     generationConfig: { maxOutputTokens: 1800, temperature: 0.3 },
   };
 
-  // Thử lần lượt các model Flash ổn định hơn khi model chính bị quá tải.
-  let lastError: unknown = null;
-  for (let attempt = 0; attempt < MODELS.length; attempt++) {
-    const model = MODELS[attempt];
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-    try {
-      const r = await fetch(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": GEMINI_KEY },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(15_000),
-      });
+  let geminiFailure = "Gemini hiện không thể trả lời.";
+  let geminiStatus = 502;
+  let geminiHadPartial = false;
 
-      if (r.ok) {
-        const d = await r.json();
-        const candidate = d?.candidates?.[0];
-        const reply = (candidate?.content?.parts ?? []).map((p: any) => p.text ?? "").join("").trim();
-        if (!reply) {
-          console.error("Gemini returned no text:", candidate?.finishReason ?? "unknown");
-          return json({ error: "empty reply" }, 502);
-        }
-        if (candidate?.finishReason === "MAX_TOKENS") {
-          console.warn("Gemini response reached max output tokens");
-        }
-        if (attempt > 0) console.warn(`Gemini fallback thành công với ${model}`);
-        return json({ reply: reply });
-      }
+  if (GEMINI_KEY) {
+    // Thử các model Gemini trước; chỉ chuyển nhà cung cấp khi tất cả đều lỗi hoặc câu trả lời bị cắt do MAX_TOKENS.
+    for (let attempt = 0; attempt < MODELS.length; attempt++) {
+      const model = MODELS[attempt];
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+      try {
+        const r = await fetch(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-goog-api-key": GEMINI_KEY },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(15_000),
+        });
 
-      const detail = (await r.text()).slice(0, 500);
-      const retryable = r.status === 429 || r.status === 500 || r.status === 502 || r.status === 503 || r.status === 504;
-      if (!retryable || attempt === MODELS.length - 1) {
-        console.error("gemini upstream:", model, r.status, detail);
-        return json({ error: "gemini_upstream", status: r.status }, 502);
+        if (r.ok) {
+          const d = await r.json();
+          const candidate = d?.candidates?.[0];
+          const reply = (candidate?.content?.parts ?? []).map((p: any) => p.text ?? "").join("").trim();
+          if (reply && candidate?.finishReason !== "MAX_TOKENS") {
+            if (attempt > 0) console.warn(`Gemini fallback thành công với ${model}`);
+            return json({ reply, provider: "gemini" });
+          }
+          geminiHadPartial = Boolean(reply);
+          geminiFailure = candidate?.finishReason === "MAX_TOKENS"
+            ? "Gemini đã chạm giới hạn độ dài đầu ra."
+            : "Gemini trả về nội dung rỗng.";
+          console.warn(geminiFailure);
+          break;
+        }
+
+        const detail = (await r.text()).slice(0, 500);
+        geminiStatus = r.status;
+        geminiFailure = `Gemini ${model} trả HTTP ${r.status}: ${detail}`;
+        const retryable = r.status === 400 || r.status === 401 || r.status === 403 ||
+          r.status === 404 || r.status === 429 || r.status >= 500;
+        if (!retryable || attempt === MODELS.length - 1) {
+          console.error("gemini upstream:", model, r.status, detail);
+          break;
+        }
+        console.warn(`Gemini ${model} trả HTTP ${r.status}; thử model kế tiếp.`);
+      } catch (e) {
+        geminiFailure = e instanceof Error ? e.message : String(e);
+        geminiStatus = 502;
+        console.warn(`Gemini ${model} lỗi kết nối: ${geminiFailure}`);
+        if (attempt === MODELS.length - 1) break;
       }
-      console.warn(`Gemini ${model} trả HTTP ${r.status}; chuyển sang model dự phòng ${MODELS[attempt + 1]}`);
-    } catch (e) {
-      lastError = e;
-      if (attempt === MODELS.length - 1) {
-        console.error("ai-chat network:", e instanceof Error ? e.message : String(e));
-        return json({ error: "upstream" }, 502);
-      }
-      console.warn(`Gemini ${model} lỗi kết nối; chuyển sang model dự phòng ${MODELS[attempt + 1]}`);
     }
+  } else {
+    geminiFailure = "Thiếu cấu hình GEMINI_API_KEY.";
+    geminiStatus = 503;
+    console.error(geminiFailure);
   }
 
-  console.error("ai-chat fallback models exhausted:", lastError);
-  return json({ error: "upstream" }, 502);
+  // ---- AI dự phòng Groq (chỉ chạy khi Gemini lỗi/hết quota/bị cắt câu trả lời) ----
+  const GROQ_KEY = Deno.env.get("GROQ_API_KEY");
+  if (GROQ_KEY) {
+    try {
+      const groqMessages = [
+        { role: "system", content: systemPrompt },
+        ...history
+          .filter((h: any) => h && (h.role === "user" || h.role === "model") && typeof h.text === "string")
+          .map((h: any) => ({
+            role: h.role === "model" ? "assistant" : "user",
+            content: h.text.slice(0, 600),
+          })),
+        { role: "user", content: message },
+      ];
+      const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "authorization": `Bearer ${GROQ_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages: groqMessages,
+          max_completion_tokens: 1800,
+          temperature: 0.3,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+
+      if (groqResponse.ok) {
+        const groqData = await groqResponse.json();
+        const groqReply = String(groqData?.choices?.[0]?.message?.content ?? "").trim();
+        if (groqReply) {
+          console.warn("Groq fallback thành công sau khi Gemini không hoàn tất câu trả lời.");
+          return json({ reply: groqReply, provider: "groq", fallback: true });
+        }
+        console.error("Groq trả về nội dung rỗng.");
+      } else {
+        const detail = (await groqResponse.text()).slice(0, 500);
+        console.error("groq upstream:", groqResponse.status, detail);
+      }
+    } catch (e) {
+      console.error("groq network:", e instanceof Error ? e.message : String(e));
+    }
+  } else {
+    console.warn("Chưa cấu hình GROQ_API_KEY; chatbot chỉ dùng Gemini.");
+  }
+
+  if (geminiHadPartial) {
+    return json({ error: "AI response incomplete", message: "Gemini bị giới hạn độ dài và Groq chưa khả dụng." }, 502);
+  }
+  console.error("Tất cả AI provider đều không khả dụng:", geminiFailure);
+  return json({ error: "ai_providers_unavailable", message: "Gemini và AI dự phòng hiện chưa thể trả lời." }, 502);
 });
