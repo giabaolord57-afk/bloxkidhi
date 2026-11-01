@@ -77,6 +77,7 @@ async function askAI(q){
   return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
  }
 }
+function notifyAccount(title,body,source){try{window.dispatchEvent(new CustomEvent('bdshop:notification',{detail:{title,body,source}}))}catch(_){}}
 function append(who,message,imgUrl,ts){const staff=who==='staff';const row=document.createElement('div');row.className='cw-msg '+(staff?'bot staff':who);const avatar=document.createElement('span');avatar.className='cw-msg-av';avatar.textContent=staff?'🎧':who==='bot'?'🤖':'👤';const bubble=document.createElement('div');bubble.className='cw-bubble';// Chỉ tạo link từ URL cấu hình shop, không thực thi HTML từ tin nhắn.
 const parts=String(message).split(/(https?:\/\/[^\s]+)/g);parts.forEach(part=>{if(/^https?:\/\//.test(part)){const a=document.createElement('a');a.href=part;a.target='_blank';a.rel='noopener noreferrer';a.textContent=part;bubble.append(a)}else bubble.append(document.createTextNode(part))});if(imgUrl){const im=document.createElement('img');im.className='cw-img';im.alt='Ảnh';im.src=imgUrl;im.addEventListener('click',()=>window.open(imgUrl,'_blank','noopener'));im.addEventListener('load',()=>{body.scrollTop=body.scrollHeight});bubble.append(im)}const tm=document.createElement('span');tm.className='cw-time';tm.textContent=fmtTime(ts);bubble.append(tm);row.append(avatar,bubble);body.append(row);body.scrollTop=body.scrollHeight;if(who==='bot'&&!isOpen())setBadge(unread+1)}
 const priceOf=p=>typeof p.raw.price==='number'?p.raw.price:p.base+((p.raw&&p.raw.noMarkup)?0:(window.SHOP.markup||0));
@@ -139,7 +140,7 @@ const signed=async path=>{try{const {data}=await db.storage.from('support-images
 const userName=u=>String((u&&u.email)||'').split('@')[0]||'khach';
 async function markRead(){if(!db||!chat)return;try{await db.rpc('support_mark_read_user')}catch(_){}}
 // Chỉ vẽ tin của nhân viên; tin của khách đã được vẽ ngay lúc gửi (tránh trùng).
-async function pull(){if(!db||!chat)return;try{const {data,error}=await db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',chat.id).gt('id',lastId).order('id',{ascending:true}).limit(50);if(error||!data||!data.length)return;let fresh=0;for(const m of data){lastId=Math.max(lastId,m.id);if(m.sender==='admin'){append('staff',m.body,m.image_path?await signed(m.image_path):null,m.created_at);fresh++}}if(fresh){if(isOpen())markRead();else setBadge(unread+fresh)}}catch(_){}}
+async function pull(){if(!db||!chat)return;try{const {data,error}=await db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',chat.id).gt('id',lastId).order('id',{ascending:true}).limit(50);if(error||!data||!data.length)return;let fresh=0;for(const m of data){lastId=Math.max(lastId,m.id);if(m.sender==='admin'){append('staff',m.body,m.image_path?await signed(m.image_path):null,m.created_at);notifyAccount('Nhân viên CSKH đã phản hồi',m.body,'staff');fresh++}}if(fresh){if(isOpen())markRead();else setBadge(unread+fresh)}}catch(_){}}
 function listen(){if(!db||!chat||channel)return;try{channel=db.channel('support-'+chat.id).on('postgres_changes',{event:'INSERT',schema:'public',table:'support_messages',filter:'chat_id=eq.'+chat.id},()=>pull()).subscribe()}catch(_){}
  poller=setInterval(()=>{if(document.hidden)return;pull()},8000)}
 function stopListen(){if(channel&&db){try{db.removeChannel(channel)}catch(_){}}channel=null;if(poller)clearInterval(poller);poller=null}
@@ -167,11 +168,11 @@ async function send(q){q=String(q||'').trim().slice(0,mode==='admin'?1000:500);i
  if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{sending=false;sendBtn.disabled=false}return}
  append('user',q);input.value='';const n=norm(q);
  // Chỉ chức năng tra cứu lịch sử đơn được xử lý riêng; mọi câu hỏi/tin nhắn khác đều do Support AI trả lời.
- if(/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)){append('bot',await orderReply(q));return}
+ if(/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)){const answer=await orderReply(q);append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot');return}
  if(aiBusy){append('bot','Support AI đang xử lý câu hỏi trước. Vui lòng đợi một chút rồi gửi lại nhé.');return}
  aiBusy=true;sendBtn.disabled=true;append('bot','Support AI đang soạn câu trả lời…');const wait=body.lastElementChild;
- try{const ai=await askAI(q);append('bot',(ai&&ai.reply)||'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.')}
- catch(_){append('bot','Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.')}
+ try{const ai=await askAI(q);const answer=(ai&&ai.reply)||'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot')}
+ catch(_){const answer='Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot')}
  finally{aiBusy=false;sendBtn.disabled=false;if(wait&&wait.parentNode)wait.remove()}
 }
 
