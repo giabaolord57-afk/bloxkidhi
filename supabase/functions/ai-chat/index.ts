@@ -198,11 +198,11 @@ Deno.serve(async (req) => {
     console.warn("Chưa cấu hình GROQ_API_KEY; chatbot chỉ dùng Gemini.");
   }
 
-  // ---- AI dự phòng thứ ba Mistral (chỉ chạy khi Gemini và Groq không trả lời) ----
-  const MISTRAL_KEY = Deno.env.get("MISTRAL_API_KEY");
-  if (MISTRAL_KEY) {
+  // ---- AI dự phòng thứ ba OpenRouter (chỉ chạy khi Gemini và Groq không trả lời) ----
+  const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
+  if (OPENROUTER_KEY) {
     try {
-      const mistralMessages = [
+      const openRouterMessages = [
         { role: "system", content: systemPrompt },
         ...history
           .filter((h: any) => h && (h.role === "user" || h.role === "model") && typeof h.text === "string")
@@ -212,43 +212,45 @@ Deno.serve(async (req) => {
           })),
         { role: "user", content: message },
       ];
-      const mistralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+      const openRouterResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "authorization": `Bearer ${MISTRAL_KEY}`,
+          "authorization": `Bearer ${OPENROUTER_KEY}`,
+          "HTTP-Referer": "https://bdshopvn.vercel.app",
+          "X-Title": "BDShopVN",
         },
         body: JSON.stringify({
-          model: "ministral-8b-latest",
-          messages: mistralMessages,
+          model: "openrouter/free",
+          messages: openRouterMessages,
           max_tokens: 1800,
           temperature: 0.3,
         }),
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(25_000),
       });
 
-      if (mistralResponse.ok) {
-        const mistralData = await mistralResponse.json();
-        const mistralReply = String(mistralData?.choices?.[0]?.message?.content ?? "").trim();
-        if (mistralReply) {
-          console.warn("Mistral fallback thành công sau khi Gemini và Groq không hoàn tất câu trả lời.");
-          return json({ reply: mistralReply, provider: "mistral", fallback: true });
+      if (openRouterResponse.ok) {
+        const openRouterData = await openRouterResponse.json();
+        const openRouterReply = String(openRouterData?.choices?.[0]?.message?.content ?? "").trim();
+        if (openRouterReply) {
+          console.warn("OpenRouter fallback thành công sau khi Gemini và Groq không hoàn tất câu trả lời.");
+          return json({ reply: openRouterReply, provider: "openrouter", fallback: true });
         }
-        console.error("Mistral trả về nội dung rỗng.");
+        console.error("OpenRouter trả về nội dung rỗng.");
       } else {
-        const detail = (await mistralResponse.text()).slice(0, 500);
-        console.error("mistral upstream:", mistralResponse.status, detail);
+        const detail = (await openRouterResponse.text()).slice(0, 500);
+        console.error("openrouter upstream:", openRouterResponse.status, detail);
       }
     } catch (e) {
-      console.error("mistral network:", e instanceof Error ? e.message : String(e));
+      console.error("openrouter network:", e instanceof Error ? e.message : String(e));
     }
   } else {
-    console.warn("Chưa cấu hình MISTRAL_API_KEY; Mistral fallback chưa được kích hoạt.");
+    console.warn("Chưa cấu hình OPENROUTER_API_KEY; OpenRouter fallback chưa được kích hoạt.");
   }
 
   if (geminiHadPartial) {
-    return json({ error: "AI response incomplete", message: "Gemini bị giới hạn độ dài và Groq chưa khả dụng." }, 502);
+    return json({ error: "AI response incomplete", message: "Gemini bị giới hạn độ dài và các AI dự phòng chưa khả dụng." }, 502);
   }
   console.error("Tất cả AI provider đều không khả dụng:", geminiFailure);
-  return json({ error: "ai_providers_unavailable", message: "Gemini và AI dự phòng hiện chưa thể trả lời." }, 502);
+  return json({ error: "ai_providers_unavailable", message: "Gemini, Groq và OpenRouter hiện chưa thể trả lời." }, 502);
 });
