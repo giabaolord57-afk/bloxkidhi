@@ -222,6 +222,59 @@
     .pw-result-box strong { flex-basis:100%; color:var(--ac); font-size:.85rem; }
     .pw-result-value { width:220px; max-width:100%; color:var(--tx) !important; background:rgba(0,0,0,.35) !important; }
     .pw-result-error { margin-top:8px; min-width:240px; color:#ffb4b4; white-space:normal; }
+
+    
+    /* ===== Responsive Admin cho điện thoại và máy tính bảng ===== */
+    @media (max-width: 700px) {
+      body { padding: 12px 10px calc(24px + env(safe-area-inset-bottom)); }
+      .admin { width: 100%; max-width: 100%; min-width: 0; }
+      .admin-header { align-items: flex-start; gap: 10px; margin-bottom: 14px; padding-bottom: 14px; }
+      .admin-header h1 { font-size: 1.45rem; gap: 8px; }
+      .admin-header .back-link { padding: 8px 10px; font-size: .8rem; }
+      .card { padding: 14px; margin: 12px 0; border-radius: 14px; }
+      .card h2 { font-size: 1.12rem; line-height: 1.35; }
+      .card p { font-size: .86rem; line-height: 1.5; }
+      .admin-tabs { top: 0; gap: 6px; margin: 8px 0 12px; padding: 5px; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+      .admin-tabs a { flex: 0 0 auto; min-width: max-content; padding: 10px 12px; font-size: .82rem; white-space: nowrap; }
+      .toolbar { gap: 8px; margin: 12px 0; }
+      .toolbar > * { max-width: 100%; }
+      input, select, textarea { max-width: 100%; }
+      form:not(.sup-form) { align-items: stretch; gap: 9px; }
+      form:not(.sup-form) > input:not([type="checkbox"]):not([type="file"]),
+      form:not(.sup-form) > select,
+      form:not(.sup-form) > textarea { width: 100% !important; min-width: 0 !important; flex: 1 1 100%; }
+      form:not(.sup-form) > button { min-height: 42px; }
+      .scroll { max-width: 100%; -webkit-overflow-scrolling: touch; }
+      .scroll table { min-width: 760px; }
+      #supRatings { min-width: 0; }
+      #supRatings table { min-width: 560px; }
+      .sup-wrap { display:flex; flex-direction:column; gap:12px; width:100%; }
+      .sup-presence-admin { gap:7px !important; }
+      .sup-list { order:1; width:100%; min-height:120px; max-height:190px; }
+      .sup-pane { order:2; width:100%; height: min(68vh,680px); min-height:460px; max-height:680px; }
+      .sup-head { padding:12px; min-height:56px; }
+      .sup-msgs { padding:12px; gap:9px; }
+      .sup-m { max-width:94%; padding:10px 12px; font-size:.92rem; }
+      .sup-quick { padding:8px; max-height:120px; }
+      .sup-form { display:flex; flex-wrap:wrap; gap:7px; padding:10px; }
+      .sup-form textarea { order:1; flex:1 1 100%; width:100%; min-height:76px; font-size:16px; }
+      .sup-form #supEmojiBtn { order:2; }
+      .sup-form #supImgBtn { order:3; }
+      .sup-form #supSend { order:4; margin-left:auto; min-width:76px; }
+      .sup-emoji { grid-template-columns:repeat(8,minmax(0,1fr)); }
+      .sup-presence-admin button { min-height:38px; }
+      .pw-result-box { min-width:0; width:100%; }
+      .pw-result-value { width:100%; }
+    }
+    @media (max-width: 380px) {
+      body { padding-left:8px; padding-right:8px; }
+      .admin-header { flex-direction:column; }
+      .admin-header h1 { font-size:1.3rem; }
+      .card { padding:11px; }
+      .sup-pane { min-height:430px; height:64vh; }
+      .sup-item { padding:10px; }
+      .admin-tabs a { padding:9px 10px; font-size:.76rem; }
+    }
   </style>
 </head>
 <body>
