@@ -2,7 +2,7 @@
 (()=>{'use strict';
 const db=window.BX_SUPABASE,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 if(!db||!$('supportCard'))return;
-let pending=null,chats=[],cur=null,lastId=0,started=false,listBusy=false,sending=false,channel=null;
+let pending=null,chats=[],cur=null,lastId=0,started=false,listBusy=false,sending=false,channel=null,pulling=false,pullAgain=false;
 const time=t=>new Date(t).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
 const say=t=>{$('supMessage').textContent=t||''};
 const needSql=e=>/support_|relation|schema cache|does not exist/i.test(e&&e.message||'')?'Cần chạy SETUP-CHAT-CSKH.sql trong Supabase SQL Editor. ('+e.message+')':(e&&e.message)||'Lỗi';
@@ -35,16 +35,23 @@ function bubble(m){
 }
 async function pull(reset){
   if(!cur)return;
-  const box=$('supMsgs');
-  const {data,error}=await db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',cur.id).gt('id',reset?0:lastId).order('id',{ascending:true}).limit(300);
-  if(error){say(needSql(error));return}
-  if(reset){box.innerHTML=''}
-  if(!data||!data.length){if(reset)box.innerHTML='<div class="sup-empty">Chưa có tin nhắn.</div>';return}
-  const stick=reset||box.scrollHeight-box.scrollTop-box.clientHeight<80;
-  const empty=box.querySelector('.sup-empty');if(empty)empty.remove();
-  data.forEach(m=>{lastId=Math.max(lastId,m.id);box.append(bubble(m))});
-  if(stick)box.scrollTop=box.scrollHeight;
-  if(data.some(m=>m.sender==='user')&&!document.hidden)markRead();
+  if(pulling){pullAgain=true;return}
+  pulling=true;
+  try{
+    const box=$('supMsgs');
+    const {data,error}=await db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',cur.id).gt('id',reset?0:lastId).order('id',{ascending:true}).limit(300);
+    if(error){say(needSql(error));return}
+    if(reset){box.innerHTML=''}
+    if(!data||!data.length){if(reset)box.innerHTML='<div class="sup-empty">Chưa có tin nhắn.</div>';return}
+    const stick=reset||box.scrollHeight-box.scrollTop-box.clientHeight<80;
+    const empty=box.querySelector('.sup-empty');if(empty)empty.remove();
+    data.forEach(m=>{if(Number(m.id)>lastId){lastId=Math.max(lastId,Number(m.id));box.append(bubble(m))}});
+    if(stick)box.scrollTop=box.scrollHeight;
+    if(data.some(m=>m.sender==='user')&&!document.hidden)markRead();
+  }finally{
+    pulling=false;
+    if(pullAgain){pullAgain=false;pull(false)}
+  }
 }
 async function markRead(){
   if(!cur)return;const id=cur.id;
