@@ -130,6 +130,11 @@ const STAFF_TEXT='Tôi cần gặp nhân viên hỗ trợ';
 const db=window.BX_SUPABASE,statusEl=panel.querySelector('.cw-status'),badge=fab.querySelector('.chat-fab-badge'),sendBtn=$('cwSend');
 let sentInSession=false,pendingImg=null,mode='ai',chat=null,lastId=0,channel=null,poller=null,historyLoaded=false,busyStaff=false,unread=0,sending=false;const renderedMessageIds=new Set();
 const staffBtn=document.createElement('button');staffBtn.className='cw-chip cw-chip-staff';staffBtn.type='button';
+const presenceEl=document.createElement('div');presenceEl.className='cw-presence';presenceEl.setAttribute('aria-live','polite');presenceEl.style.cssText='font-size:11px;margin-top:3px;font-weight:600;color:#16a34a';presenceEl.textContent='● Đang kiểm tra trạng thái CSKH...';if(statusEl&&statusEl.parentNode)statusEl.parentNode.append(presenceEl);
+let presenceChannel=null,presencePoll=null;
+async function refreshPresence(){if(!db||!presenceEl)return;try{const {data,error}=await db.from('support_presence').select('status').eq('id',true).maybeSingle();if(error||!data)throw error||new Error('no status');const online=data.status!=='away';presenceEl.textContent=online?'● CSKH đang online':'● CSKH tạm vắng';presenceEl.style.color=online?'#16a34a':'#d97706'}catch(_){presenceEl.textContent='● Chưa xác định trạng thái CSKH';presenceEl.style.color='#94a3b8'}}
+function startPresence(){if(!db)return;refreshPresence();if(presencePoll)clearInterval(presencePoll);presencePoll=setInterval(()=>{if(!document.hidden)refreshPresence()},15000);try{if(presenceChannel)db.removeChannel(presenceChannel);presenceChannel=db.channel('public-support-presence').on('postgres_changes',{event:'UPDATE',schema:'public',table:'support_presence'},refreshPresence).subscribe()}catch(_){}}
+
 function renderMode(){const m=mode==='admin';resolveBtn.style.display=(m&&sentInSession)?'':'none';imgBtn.hidden=!m;if(!m)clearImg();staffBtn.textContent=m?'🤖 Hỏi AI':'☏ Gặp CSKH';staffBtn.title=m?'Quay lại trợ lý AI':'Chat trực tiếp với nhân viên hỗ trợ';
  panel.classList.toggle('cw-staff-mode',m);if(statusEl)statusEl.textContent=m?'● Đang chat với nhân viên CSKH':'● Trợ lý tự động BDShopVN';
  input.placeholder=m?'Nhắn cho nhân viên CSKH...':'Nhập câu hỏi...'}
@@ -227,5 +232,5 @@ quick.append(staffBtn,resolveBtn);
 const prompts=['Shop bán gì?','Cách mua hàng','Bảng giá Robux','Cày thuê có gì?','Gamepass có gì?','Thanh toán','Cách tắt 2FA','Lịch sử đơn hàng','Liên hệ admin'];prompts.forEach(t=>{const b=document.createElement('button');b.className='cw-chip';b.textContent=t;b.addEventListener('click',()=>{if(mode==='admin')backToAI().then(()=>send(t));else send(t)});quick.append(b)});
 function open(){panel.classList.add('open');fab.classList.add('hidden');if(!started){started=true;append('bot',answers.hello+' Bạn có thể chọn câu hỏi nhanh bên dưới, hoặc bấm “☏ Gặp CSKH” để chat với nhân viên.')}setBadge(0);if(chat){pull();markRead()}input.focus()}
 fab.addEventListener('click',open);$('chatClose').addEventListener('click',()=>{panel.classList.remove('open');fab.classList.remove('hidden')});sendBtn.addEventListener('click',()=>send(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value)}});
-renderMode();initSupport();if(db)db.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_IN'||ev==='SIGNED_OUT')setTimeout(initSupport,0)});
+renderMode();startPresence();initSupport();if(db)db.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_IN'||ev==='SIGNED_OUT')setTimeout(initSupport,0)});
 })();
