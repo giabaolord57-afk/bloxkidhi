@@ -9,7 +9,7 @@
   .password-field{position:relative;display:block}.account-panel .password-field input{padding-right:52px}.password-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);min-width:36px;height:34px;border:1px solid rgba(148,163,184,.25);border-radius:9px;background:rgba(99,102,241,.13);color:#fff;cursor:pointer;font-size:16px}.password-toggle:hover{background:rgba(99,102,241,.3)}</style>
 </head>
 <body>
-  <header class="nav"><div class="wrap nav-in"><a class="brand" href="index.html#/" aria-label="BDShopVN"><img class="logo" src="img/logo.png" alt="BDShopVN"></a><a class="btn btn-g btn-s" href="index.html#/">← Về cửa hàng</a></div></header>
+  <header class="nav"><div class="wrap nav-in"><a class="brand" href="index.html#/" aria-label="BDShopVN"><img class="logo" src="img/logo.png" alt="BDShopVN"></a><div class="nav-actions"><button id="notificationBtn" class="notification-btn" type="button" aria-label="Lịch sử thông báo" title="Thông báo">🔔<span id="notificationCount" class="notification-count" style="display:none">0</span></button><a class="btn btn-g btn-s" href="index.html#/">← Về cửa hàng</a></div></div></header>
   <main class="wrap account-wrap">
     <div class="account-head"><div class="crumb"><a href="index.html#/">Trang chủ</a> / Tài khoản</div><h1>Tài khoản BDShopVN</h1><p class="muted">Đăng ký bằng tên đăng nhập và mật khẩu, xem lịch sử đơn hàng của bạn.</p></div>
     <div id="authArea" class="account-panel">
@@ -64,4 +64,5 @@
     renderAuth();
   })();
   </script>
+  <script src="js/notifications.js?v=2" defer></script>
 </body></html>
