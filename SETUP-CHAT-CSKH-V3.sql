@@ -26,6 +26,14 @@ DROP POLICY IF EXISTS "Anyone can read CSKH presence" ON public.support_presence
 CREATE POLICY "Anyone can read CSKH presence" ON public.support_presence
   FOR SELECT TO anon, authenticated USING (true);
 
+
+CREATE OR REPLACE FUNCTION public.support_get_presence()
+RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $
+  SELECT status FROM public.support_presence WHERE id=true
+$;
+REVOKE ALL ON FUNCTION public.support_get_presence() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.support_get_presence() TO anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.support_set_presence(p_status text)
 RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $
 BEGIN
