@@ -45,20 +45,20 @@ async function orderReply(question=''){
  }catch(_){return 'Không thể tải lịch sử đơn lúc này. Vui lòng thử lại sau.';}
 }
 const fmtTime=ts=>{const d=ts?new Date(ts):new Date();if(isNaN(d))return '';const o={timeZone:'Asia/Ho_Chi_Minh'},t=d.toLocaleTimeString('vi-VN',{...o,hour:'2-digit',minute:'2-digit'}),day=x=>x.toLocaleDateString('vi-VN',o);return day(d)===day(new Date())?t:t+' · '+d.toLocaleDateString('vi-VN',{...o,day:'2-digit',month:'2-digit'})};
-// ===== AI (Gemini) — chỉ gọi khi bot từ khóa không hiểu; lỗi/hết lượt thì dùng câu trả lời cũ =====
+// ===== Support AI — Gemini là luồng trả lời mặc định cho mọi tin nhắn tự nhập =====
 const aiHist=[];let aiBusy=false,aiOffUntil=0;
 const redact=t=>String(t).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'[email]').replace(/\d[\d\s.-]{7,}\d/g,'[số]');
 function aiContext(){
- const lines=['## QUY TẮC TRẢ LỜI: Khi khách hỏi so sánh hai hay nhiều trái/sản phẩm, hãy trả lời đúng trọng tâm bằng ưu điểm, nhược điểm và trường hợp nên chọn; không tự chuyển câu hỏi thành báo giá một sản phẩm. Chỉ nêu giá khi khách hỏi giá rõ ràng. Nếu thiếu dữ liệu để kết luận, hãy nói rõ.'];groups.forEach(g=>{const ps=unique.filter(p=>p.category===g.name);if(!ps.length)return;lines.push('## '+g.name+(g.desc?' — '+g.desc:'')+'\n'+ps.slice(0,40).map(p=>p.name+': '+fmt(priceOf(p))).join('; '))});
+ const lines=['## QUY TẮC TRẢ LỜI: Bạn là Support AI chính của BDShopVN. Mọi câu hỏi phải được trả lời theo đúng ý khách. Phân biệt chính xác biến thể sản phẩm, ví dụ trái trong RƯƠNG khác trái VĨNH VIỄN/PERMANENT; tuyệt đối không lấy giá của biến thể này áp cho biến thể khác. Chỉ nêu giá khi có đúng sản phẩm/biến thể trong dữ liệu. Khi so sánh, nêu ưu nhược điểm và trường hợp nên chọn. Nếu dữ liệu không có hoặc tên sản phẩm chưa rõ, hỏi lại hoặc nói chưa có dữ liệu; không đoán giá.'];groups.forEach(g=>{const ps=unique.filter(p=>p.category===g.name);if(!ps.length)return;lines.push('## '+g.name+(g.desc?' — '+g.desc:'')+'\n'+ps.slice(0,40).map(p=>p.name+': '+fmt(priceOf(p))).join('; '))});
  if(window.BOOST&&window.BOOST.desc)lines.push('## Lưu ý cày thuê: '+window.BOOST.desc);
  lines.push('## Cách mua: '+answers.buy,'## Thanh toán: chuyển khoản (VietQR, có thể gửi bill) hoặc thẻ cào; làm theo biểu mẫu ở bước thanh toán.','## Bảo hành: chưa có chính sách chung; điều kiện riêng do Admin xác nhận.','## LIÊN HỆ: Zalo '+(contact.zalo||'chưa cập nhật')+'; Facebook '+(contact.facebook||'chưa cập nhật'));
  const faqTxt=faqList.map(f=>'Hỏi: '+f.title+'\nĐáp: '+faqFill(f.a)).join('\n\n').slice(0,7000);
  return lines.join('\n').slice(0,6800)+'\n\n=== FAQ CỦA SHOP ===\n'+faqTxt}
 async function askAI(q){
  const dbx=window.BX_SUPABASE;
- if(!window.SHOP.aiChat)return {error:'Trợ lý AI hiện đang được tắt. Bạn có thể liên hệ Admin để được hỗ trợ.'};
- if(!dbx)return {error:'Website chưa kết nối được Supabase nên chưa gọi được Gemini. Vui lòng tải lại trang hoặc liên hệ Admin.'};
- if(Date.now()<aiOffUntil)return {error:'Gemini đang tạm ngắt sau lỗi kết nối. Vui lòng thử lại sau khoảng 1 phút hoặc bấm “☏ Gặp CSKH”.'};
+ if(!window.SHOP.aiChat)return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
+ if(!dbx)return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
+ if(Date.now()<aiOffUntil)return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
  let ctl,t;
  try{
   ctl=new AbortController();t=setTimeout(()=>ctl.abort(),55000);
@@ -67,14 +67,14 @@ async function askAI(q){
   if(error||!data||typeof data.reply!=='string'){
    aiOffUntil=Date.now()+60000;
    const code=data&&data.error;
-   if(code==='rate'||code==='cap')return {error:'Gemini đang quá lượt sử dụng tạm thời. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
-   return {error:'Gemini chưa phản hồi sau nhiều lần thử. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
+   if(code==='rate'||code==='cap')return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
+   return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
   }
   aiHist.push({role:'user',text:redact(q)},{role:'model',text:data.reply});if(aiHist.length>12)aiHist.splice(0,2);
   return {reply:data.reply};
  }catch(_){
   if(t)clearTimeout(t);aiOffUntil=Date.now()+60000;
-  return {error:'Kết nối Gemini bị gián đoạn hoặc quá thời gian chờ. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
+  return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
  }
 }
 function append(who,message,imgUrl,ts){const staff=who==='staff';const row=document.createElement('div');row.className='cw-msg '+(staff?'bot staff':who);const avatar=document.createElement('span');avatar.className='cw-msg-av';avatar.textContent=staff?'🎧':who==='bot'?'🤖':'👤';const bubble=document.createElement('div');bubble.className='cw-bubble';// Chỉ tạo link từ URL cấu hình shop, không thực thi HTML từ tin nhắn.
@@ -165,14 +165,15 @@ async function sendStaff(q){if(!q&&!pendingImg)return;const img=pendingImg;let p
  append('user',q,img?img.url:null);sentInSession=true;renderMode();input.value='';clearImg();if(typeof data==='number')lastId=Math.max(lastId,data)}
 async function send(q){q=String(q||'').trim().slice(0,mode==='admin'?1000:500);if(!q&&!(mode==='admin'&&pendingImg))return;
  if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{sending=false;sendBtn.disabled=false}return}
- append('user',q);input.value='';const n=norm(q);let answer=!faqMatch(n)&&/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)?await orderReply(q):reply(q);
- if(answer===FALLBACK&&window.SHOP.aiChat){
-  if(aiBusy){append('bot','Mình đang xử lý câu hỏi trước, bạn đợi một chút rồi gửi lại nhé.');return}
-  aiBusy=true;sendBtn.disabled=true;append('bot','Đang soạn câu trả lời…');const wait=body.lastElementChild;
-  try{const ai=await askAI(q);answer=(ai&&ai.reply)||((ai&&ai.error)||'Chưa nhận được phản hồi từ Gemini. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.')}
-  finally{aiBusy=false;sendBtn.disabled=false;if(wait&&wait.parentNode)wait.remove()}
- }
- append('bot',answer)}
+ append('user',q);input.value='';const n=norm(q);
+ // Chỉ chức năng tra cứu lịch sử đơn được xử lý riêng; mọi câu hỏi/tin nhắn khác đều do Support AI trả lời.
+ if(/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)){append('bot',await orderReply(q));return}
+ if(aiBusy){append('bot','Support AI đang xử lý câu hỏi trước. Vui lòng đợi một chút rồi gửi lại nhé.');return}
+ aiBusy=true;sendBtn.disabled=true;append('bot','Support AI đang soạn câu trả lời…');const wait=body.lastElementChild;
+ try{const ai=await askAI(q);append('bot',(ai&&ai.reply)||'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.')}
+ catch(_){append('bot','Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.')}
+ finally{aiBusy=false;sendBtn.disabled=false;if(wait&&wait.parentNode)wait.remove()}
+}
 
 // ===== Emoji, ảnh, "Đã giải quyết" + đánh giá sao =====
 const row=panel.querySelector('.cw-input-row');
