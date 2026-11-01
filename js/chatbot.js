@@ -61,14 +61,14 @@ async function askAI(q){
  if(Date.now()<aiOffUntil)return {error:'Gemini đang tạm ngắt sau lỗi kết nối. Vui lòng thử lại sau khoảng 1 phút hoặc bấm “☏ Gặp CSKH”.'};
  let ctl,t;
  try{
-  ctl=new AbortController();t=setTimeout(()=>ctl.abort(),22000);
+  ctl=new AbortController();t=setTimeout(()=>ctl.abort(),55000);
   const {data,error}=await dbx.functions.invoke('ai-chat',{body:{message:redact(q),context:aiContext(),history:aiHist.slice(-6)},signal:ctl.signal});
   clearTimeout(t);
   if(error||!data||typeof data.reply!=='string'){
    aiOffUntil=Date.now()+60000;
    const code=data&&data.error;
    if(code==='rate'||code==='cap')return {error:'Gemini đang quá lượt sử dụng tạm thời. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
-   return {error:'Chưa kết nối được Gemini (có thể Edge Function chưa được deploy hoặc cấu hình API/CORS đang lỗi). Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
+   return {error:'Gemini chưa phản hồi sau nhiều lần thử. Vui lòng thử lại sau hoặc bấm “☏ Gặp CSKH”.'};
   }
   aiHist.push({role:'user',text:redact(q)},{role:'model',text:data.reply});if(aiHist.length>12)aiHist.splice(0,2);
   return {reply:data.reply};
