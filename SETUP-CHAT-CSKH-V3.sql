@@ -71,9 +71,9 @@ BEGIN
 
   msg := '✅ Vấn đề đã được giải quyết (kết thúc phiên #' || c.session_no || ')' || E'\nĐánh giá: ' || faces[p_rating] || ' ' || repeat('★', p_rating) || repeat('☆', 5 - p_rating) || ' (' || p_rating || '/5)'
          || CASE WHEN cm <> '' THEN E'\n“' || cm || '”' ELSE '' END;
-  INSERT INTO public.support_messages(chat_id, sender, body, session_no) VALUES (c.id, 'user', left(msg, 1000), c.session_no);
+  -- Không ghi tin nhắn tổng kết vào support_messages để phiên mới bắt đầu với khung chat trống.
   UPDATE public.support_chats SET status = 'closed', mode = 'ai', session_no = c.session_no + 1,
-    last_message = left(msg, 120), last_message_at = now(), unread_admin = unread_admin + 1 WHERE id = c.id;
+    last_message = left(msg, 120), last_message_at = now() WHERE id = c.id;
   RETURN c.session_no + 1;
 END $$;
 
