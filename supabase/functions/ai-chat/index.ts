@@ -43,20 +43,49 @@ Deno.serve(async (req) => {
   const history = Array.isArray(body?.history) ? body.history.slice(-6) : [];
   if (!message) return json({ error: "empty" }, 400);
 
-  // ---- giới hạn lượt ----
-  const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
-  const ipHash = await sha256(ip + (Deno.env.get("IP_SALT") ?? "bdshop"));
+  // ---- giới hạn lượt: lỗi bảng/secret không được làm sập chatbot ----
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  let db: any = null;
+  let ipHash = "";
   const since = (ms: number) => new Date(Date.now() - ms).toISOString();
-  const count = async (q: any) => (await q).count ?? 0;
-  const base = () => db.from("ai_chat_log").select("id", { count: "exact", head: true });
-  if (await count(base().eq("ip_hash", ipHash).gte("created_at", since(60_000))) >= IP_PER_MIN) return json({ error: "rate" }, 429);
-  if (await count(base().eq("ip_hash", ipHash).gte("created_at", since(86_400_000))) >= IP_PER_DAY) return json({ error: "rate" }, 429);
-  if (await count(base().gte("created_at", since(86_400_000))) >= DAILY_CAP) return json({ error: "cap" }, 503);
-  await db.from("ai_chat_log").insert({ ip_hash: ipHash });
-  if (Math.random() < 0.02) await db.from("ai_chat_log").delete().lt("created_at", since(3 * 86_400_000));
+
+  if (supabaseUrl && serviceRoleKey) {
+    try {
+      db = createClient(supabaseUrl, serviceRoleKey);
+      const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+      ipHash = await sha256(ip + (Deno.env.get("IP_SALT") ?? "bdshop"));
+      const base = () => db.from("ai_chat_log").select("id", { count: "exact", head: true });
+      const [minute, day, total] = await Promise.all([
+        base().eq("ip_hash", ipHash).gte("created_at", since(60_000)),
+        base().eq("ip_hash", ipHash).gte("created_at", since(86_400_000)),
+        base().gte("created_at", since(86_400_000)),
+      ]);
+      if (!minute.error && (minute.count ?? 0) >= IP_PER_MIN) return json({ error: "rate" }, 429);
+      if (!day.error && (day.count ?? 0) >= IP_PER_DAY) return json({ error: "rate" }, 429);
+      if (!total.error && (total.count ?? 0) >= DAILY_CAP) return json({ error: "cap" }, 503);
+      const saved = await db.from("ai_chat_log").insert({ ip_hash: ipHash });
+      if (saved.error) console.error("ai_chat_log insert:", saved.error.message);
+      if (Math.random() < 0.02) {
+        const cleaned = await db.from("ai_chat_log").delete().lt("created_at", since(3 * 86_400_000));
+        if (cleaned.error) console.error("ai_chat_log cleanup:", cleaned.error.message);
+      }
+      if (minute.error || day.error || total.error) {
+        console.error("ai_chat_log query:", minute.error?.message, day.error?.message, total.error?.message);
+      }
+    } catch (e) {
+      console.error("rate-limit setup:", e instanceof Error ? e.message : String(e));
+      db = null; // tiếp tục trả lời AI; không để lỗi thống kê làm sập chat
+    }
+  } else {
+    console.error("rate-limit disabled: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
 
   // ---- gọi Gemini ----
+  if (!GEMINI_KEY) {
+    console.error("Gemini configuration: missing GEMINI_API_KEY secret");
+    return json({ error: "gemini_config" }, 503);
+  }
   const contents = history
     .filter((h: any) => h && (h.role === "user" || h.role === "model") && typeof h.text === "string")
     .map((h: any) => ({ role: h.role, parts: [{ text: h.text.slice(0, 600) }] }));
@@ -73,7 +102,7 @@ Deno.serve(async (req) => {
       }),
       signal: AbortSignal.timeout(20_000),
     });
-    if (!r.ok) { console.error("gemini", r.status, (await r.text()).slice(0, 300)); return json({ error: "upstream" }, 502); }
+    if (!r.ok) { const detail = (await r.text()).slice(0, 500); console.error("gemini upstream:", r.status, detail); return json({ error: "gemini_upstream", status: r.status }, 502); }
     const d = await r.json();
     const text = (d?.candidates?.[0]?.content?.parts ?? []).map((p: any) => p.text ?? "").join("").trim();
     if (!text) return json({ error: "empty reply" }, 502);
