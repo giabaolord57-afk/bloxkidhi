@@ -64,6 +64,11 @@ BEGIN
     RAISE EXCEPTION 'Bạn vừa gửi đánh giá, vui lòng chờ một chút';
   END IF;
   INSERT INTO public.support_ratings(chat_id, user_id, username, rating, comment, session_no) VALUES (c.id, auth.uid(), c.username, p_rating, cm, c.session_no);
+
+  -- Xóa toàn bộ tin nhắn của phiên vừa đánh giá; bản đánh giá vẫn được lưu riêng.
+  DELETE FROM public.support_messages
+  WHERE chat_id = c.id AND session_no = c.session_no;
+
   msg := '✅ Vấn đề đã được giải quyết (kết thúc phiên #' || c.session_no || ')' || E'\nĐánh giá: ' || faces[p_rating] || ' ' || repeat('★', p_rating) || repeat('☆', 5 - p_rating) || ' (' || p_rating || '/5)'
          || CASE WHEN cm <> '' THEN E'\n“' || cm || '”' ELSE '' END;
   INSERT INTO public.support_messages(chat_id, sender, body, session_no) VALUES (c.id, 'user', left(msg, 1000), c.session_no);
