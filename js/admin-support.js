@@ -22,7 +22,7 @@ const presenceBtns={online:document.createElement('button'),away:document.create
 presenceBtns.online.type=presenceBtns.away.type='button';
 presenceBtns.online.textContent='🟢 CSKH đang online';presenceBtns.away.textContent='🟠 CSKH tạm vắng';
 Object.entries(presenceBtns).forEach(([key,btn])=>{btn.style.cssText='border:1px solid #64748b;border-radius:20px;padding:7px 11px;background:transparent;color:inherit;cursor:pointer;font-size:12px';btn.addEventListener('click',()=>setPresence(key));presenceBox.append(btn)});
-const listParent=$('supList').parentNode;listParent.insertBefore(presenceBox,$('supList'));
+const supportWrap=$('supList').closest('.sup-wrap');supportWrap.parentNode.insertBefore(presenceBox,supportWrap);
 function paintPresence(){Object.entries(presenceBtns).forEach(([key,btn])=>{btn.style.fontWeight=presence===key?'700':'400';btn.style.borderColor=presence===key?(key==='online'?'#16a34a':'#d97706'):'#64748b';btn.style.background=presence===key?(key==='online'?'rgba(22,163,74,.12)':'rgba(217,119,6,.12)'):'transparent'})}
 async function loadPresence(){const {data,error}=await db.rpc('support_get_presence');if(!error&&data){presence=data==='away'?'away':'online';paintPresence()}}
 async function setPresence(value){const {error}=await db.rpc('support_set_presence',{p_status:value});if(error){say(needSql(error));return}presence=value;paintPresence();say(value==='online'?'Đã đặt CSKH đang online.':'Đã đặt CSKH tạm vắng.')}
