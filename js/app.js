@@ -276,7 +276,8 @@
         ${needUser ? `<div class="field"><label class="f">Roblox username *</label><input type="text" name="user" required placeholder="Tên đăng nhập Roblox"></div>` : ""}
         ${needPass ? `<div class="field"><label class="f" for="rbpw">Mật khẩu Roblox * <span class="muted small">(để shop thực hiện dịch vụ/đơn hàng)</span></label>
           <div class="pw"><input type="password" name="password" id="rbpw" required maxlength="128" autocomplete="new-password" placeholder="Mật khẩu tài khoản Roblox"><button type="button" class="pw-t" data-pwtoggle aria-label="Hiện hoặc ẩn mật khẩu">👁</button></div></div>
-        <label class="agree"><input type="checkbox" name="agree" required> <span>Tôi đồng ý cung cấp mật khẩu để shop thực hiện dịch vụ/đơn hàng và sẽ đổi mật khẩu ngay sau khi hoàn tất.</span></label>` : ""}
+        <label class="agree"><input type="checkbox" name="agree" required> <span>Tôi đồng ý cung cấp mật khẩu để shop thực hiện dịch vụ/đơn hàng và sẽ đổi mật khẩu ngay sau khi hoàn tất.</span></label>
+        <label class="agree"><input type="checkbox" name="twoFactorOff" required> <span>Tôi đã tắt 2FA trên Roblox trước khi đặt đơn.</span></label>` : ""}
         <div class="field"><label class="f">Zalo / SĐT liên hệ *</label><input type="text" name="contact" required placeholder="Số Zalo hoặc link Facebook"></div>
         <div class="field"><label class="f">Phương thức thanh toán *</label>
           <div class="pay-methods" role="radiogroup" aria-label="Phương thức thanh toán">
