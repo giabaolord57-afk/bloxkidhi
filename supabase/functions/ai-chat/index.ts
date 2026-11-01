@@ -248,9 +248,64 @@ Deno.serve(async (req) => {
     console.warn("Chưa cấu hình OPENROUTER_API_KEY; OpenRouter fallback chưa được kích hoạt.");
   }
 
+  // ---- AI dự phòng thứ tư Cloudflare Workers AI (chỉ chạy khi các provider trước không trả lời) ----
+  const CLOUDFLARE_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
+  const CLOUDFLARE_API_TOKEN = Deno.env.get("CLOUDFLARE_API_TOKEN");
+  if (CLOUDFLARE_ACCOUNT_ID && CLOUDFLARE_API_TOKEN) {
+    try {
+      const cloudflareMessages = [
+        { role: "system", content: systemPrompt },
+        ...history
+          .filter((h: any) => h && (h.role === "user" || h.role === "model") && typeof h.text === "string")
+          .map((h: any) => ({
+            role: h.role === "model" ? "assistant" : "user",
+            content: h.text.slice(0, 600),
+          })),
+        { role: "user", content: message },
+      ];
+      const cloudflareResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/zai-org/glm-4.7-flash`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "authorization": `Bearer ${CLOUDFLARE_API_TOKEN}`,
+          },
+          body: JSON.stringify({
+            messages: cloudflareMessages,
+            max_tokens: 1800,
+            temperature: 0.3,
+          }),
+          signal: AbortSignal.timeout(25_000),
+        },
+      );
+
+      if (cloudflareResponse.ok) {
+        const cloudflareData = await cloudflareResponse.json();
+        const cloudflareReply = String(
+          cloudflareData?.result?.response ??
+          cloudflareData?.result?.choices?.[0]?.message?.content ??
+          "",
+        ).trim();
+        if (cloudflareReply) {
+          console.warn("Cloudflare Workers AI fallback thành công.");
+          return json({ reply: cloudflareReply, provider: "cloudflare", fallback: true });
+        }
+        console.error("Cloudflare Workers AI trả về nội dung rỗng.");
+      } else {
+        const detail = (await cloudflareResponse.text()).slice(0, 500);
+        console.error("cloudflare upstream:", cloudflareResponse.status, detail);
+      }
+    } catch (e) {
+      console.error("cloudflare network:", e instanceof Error ? e.message : String(e));
+    }
+  } else {
+    console.warn("Chưa cấu hình CLOUDFLARE_ACCOUNT_ID hoặc CLOUDFLARE_API_TOKEN; Cloudflare fallback chưa được kích hoạt.");
+  }
+
   if (geminiHadPartial) {
     return json({ error: "AI response incomplete", message: "Gemini bị giới hạn độ dài và các AI dự phòng chưa khả dụng." }, 502);
   }
   console.error("Tất cả AI provider đều không khả dụng:", geminiFailure);
-  return json({ error: "ai_providers_unavailable", message: "Gemini, Groq và OpenRouter hiện chưa thể trả lời." }, 502);
+  return json({ error: "ai_providers_unavailable", message: "Gemini, Groq, OpenRouter và Cloudflare hiện chưa thể trả lời." }, 502);
 });
