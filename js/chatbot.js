@@ -167,6 +167,7 @@ async function sendStaff(q){if(!q&&!pendingImg)return;const img=pendingImg;let p
 async function send(q){q=String(q||'').trim().slice(0,mode==='admin'?1000:500);if(!q&&!(mode==='admin'&&pendingImg))return;
  if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{sending=false;sendBtn.disabled=false}return}
  append('user',q);input.value='';const n=norm(q);
+ if(/cach tat 2fa|tat 2fa|2 step verification|two step verification/.test(n)){const answer='**Hướng dẫn tắt 2FA trên Roblox**\\n\\n1. Chỉ làm nếu trên form bạn chọn "Đã tắt 2FA":\\n2. Roblox → Settings → Security\\n3. Tắt 2-Step Verification\\n4. Bấm Log Out of All Other Sessions\\n5. Quay lại đặt hàng. Nhận Robux xong nên bật lại 2FA.\\n\\n⚠️ Lưu ý: Tắt 2FA làm tài khoản kém an toàn hơn. Chỉ thực hiện khi bạn hiểu rõ rủi ro và bật lại ngay sau khi hoàn tất.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot');return}
  // Chỉ chức năng tra cứu lịch sử đơn được xử lý riêng; mọi câu hỏi/tin nhắn khác đều do Support AI trả lời.
  if(/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)){const answer=await orderReply(q);append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot');return}
  if(aiBusy){append('bot','Support AI đang xử lý câu hỏi trước. Vui lòng đợi một chút rồi gửi lại nhé.');return}
@@ -221,7 +222,7 @@ okBtn.addEventListener('click',async()=>{if(!stars)return;okBtn.disabled=true;ok
  append('bot',FACES[stars-1]+' Cảm ơn bạn đã đánh giá '+'★'.repeat(stars)+'☆'.repeat(5-stars)+' ('+stars+'/5 — '+LABELS[stars-1]+')! Phản hồi đã được gửi tới nhân viên CSKH.\nMột phiên hỗ trợ mới đã được mở cho bạn.');
  append('bot',answers.hello+' Cần gặp nhân viên, bấm “☏ Gặp CSKH” nhé.')});
 quick.append(staffBtn,resolveBtn);
-const prompts=['Shop bán gì?','Cách mua hàng','Bảng giá Robux','Cày thuê có gì?','Gamepass có gì?','Thanh toán','Lịch sử đơn hàng','Liên hệ admin'];prompts.forEach(t=>{const b=document.createElement('button');b.className='cw-chip';b.textContent=t;b.addEventListener('click',()=>{if(mode==='admin')backToAI().then(()=>send(t));else send(t)});quick.append(b)});
+const prompts=['Shop bán gì?','Cách mua hàng','Bảng giá Robux','Cày thuê có gì?','Gamepass có gì?','Thanh toán','Cách tắt 2FA','Lịch sử đơn hàng','Liên hệ admin'];prompts.forEach(t=>{const b=document.createElement('button');b.className='cw-chip';b.textContent=t;b.addEventListener('click',()=>{if(mode==='admin')backToAI().then(()=>send(t));else send(t)});quick.append(b)});
 function open(){panel.classList.add('open');fab.classList.add('hidden');if(!started){started=true;append('bot',answers.hello+' Bạn có thể chọn câu hỏi nhanh bên dưới, hoặc bấm “☏ Gặp CSKH” để chat với nhân viên.')}setBadge(0);if(chat)markRead();input.focus()}
 fab.addEventListener('click',open);$('chatClose').addEventListener('click',()=>{panel.classList.remove('open');fab.classList.remove('hidden')});sendBtn.addEventListener('click',()=>send(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value)}});
 renderMode();initSupport();if(db)db.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_IN'||ev==='SIGNED_OUT')setTimeout(initSupport,0)});
