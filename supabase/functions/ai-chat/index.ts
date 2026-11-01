@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": GEMINI_KEY },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(15_000),
       });
 
       if (r.ok) {
