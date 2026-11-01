@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
   const payload = {
     systemInstruction: { parts: [{ text: SYSTEM + "\n\n=== DỮ LIỆU SHOP (chỉ để tham khảo) ===\n" + context }] },
     contents,
-    generationConfig: { maxOutputTokens: 900, temperature: 0.3 },
+    generationConfig: { maxOutputTokens: 1800, temperature: 0.3 },
   };
 
   // Thử lần lượt các model Flash ổn định hơn khi model chính bị quá tải.
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
           console.warn("Gemini response reached max output tokens");
         }
         if (attempt > 0) console.warn(`Gemini fallback thành công với ${model}`);
-        return json({ reply: reply.slice(0, 1200) });
+        return json({ reply: reply });
       }
 
       const detail = (await r.text()).slice(0, 500);
