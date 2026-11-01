@@ -2,7 +2,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+const MODEL = "gemini-3.8-flash";
 const DAILY_CAP = Number(Deno.env.get("AI_DAILY_CAP") ?? "900");   // tổng lượt/ngày toàn shop (giữ dưới hạn mức miễn phí)
 const IP_PER_MIN = Number(Deno.env.get("AI_IP_PER_MIN") ?? "6");
 const IP_PER_DAY = Number(Deno.env.get("AI_IP_PER_DAY") ?? "50");
