@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
           "authorization": `Bearer ${GROQ_KEY}`,
         },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
+          model: "openai/gpt-oss-20b",
           messages: groqMessages,
           max_completion_tokens: 1800,
           temperature: 0.3,
