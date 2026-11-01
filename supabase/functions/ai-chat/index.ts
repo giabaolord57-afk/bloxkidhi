@@ -198,6 +198,54 @@ Deno.serve(async (req) => {
     console.warn("Chưa cấu hình GROQ_API_KEY; chatbot chỉ dùng Gemini.");
   }
 
+  // ---- AI dự phòng thứ ba Mistral (chỉ chạy khi Gemini và Groq không trả lời) ----
+  const MISTRAL_KEY = Deno.env.get("MISTRAL_API_KEY");
+  if (MISTRAL_KEY) {
+    try {
+      const mistralMessages = [
+        { role: "system", content: systemPrompt },
+        ...history
+          .filter((h: any) => h && (h.role === "user" || h.role === "model") && typeof h.text === "string")
+          .map((h: any) => ({
+            role: h.role === "model" ? "assistant" : "user",
+            content: h.text.slice(0, 600),
+          })),
+        { role: "user", content: message },
+      ];
+      const mistralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "authorization": `Bearer ${MISTRAL_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "ministral-8b-latest",
+          messages: mistralMessages,
+          max_tokens: 1800,
+          temperature: 0.3,
+        }),
+        signal: AbortSignal.timeout(20_000),
+      });
+
+      if (mistralResponse.ok) {
+        const mistralData = await mistralResponse.json();
+        const mistralReply = String(mistralData?.choices?.[0]?.message?.content ?? "").trim();
+        if (mistralReply) {
+          console.warn("Mistral fallback thành công sau khi Gemini và Groq không hoàn tất câu trả lời.");
+          return json({ reply: mistralReply, provider: "mistral", fallback: true });
+        }
+        console.error("Mistral trả về nội dung rỗng.");
+      } else {
+        const detail = (await mistralResponse.text()).slice(0, 500);
+        console.error("mistral upstream:", mistralResponse.status, detail);
+      }
+    } catch (e) {
+      console.error("mistral network:", e instanceof Error ? e.message : String(e));
+    }
+  } else {
+    console.warn("Chưa cấu hình MISTRAL_API_KEY; Mistral fallback chưa được kích hoạt.");
+  }
+
   if (geminiHadPartial) {
     return json({ error: "AI response incomplete", message: "Gemini bị giới hạn độ dài và Groq chưa khả dụng." }, 502);
   }
