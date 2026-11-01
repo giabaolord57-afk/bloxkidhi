@@ -1,0 +1,18 @@
+/* BDShopVN — thong bao theo tai khoan */
+(()=>{'use strict';
+const db=window.BX_SUPABASE, btn=document.getElementById('notificationBtn'), badge=document.getElementById('notificationCount');
+if(!btn||!db)return;
+let user=null,items=[],modal=null,loading=false;
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(title,body){const t=document.getElementById('toast');if(!t)return;t.textContent='🔔 '+title+(body?' — '+String(body).slice(0,90):'');t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),4200)}
+function count(){const n=items.filter(x=>!x.is_read).length;badge.textContent=n>99?'99+':String(n);badge.style.display=n?'grid':'none'}
+function ensureModal(){if(modal)return;modal=document.createElement('div');modal.className='bd-notify-overlay';modal.hidden=true;modal.innerHTML='<section class="bd-notify-panel" role="dialog" aria-modal="true" aria-label="Lịch sử thông báo"><header><b>🔔 Thông báo của bạn</b><button type="button" class="bd-notify-close" aria-label="Đóng">✕</button></header><div class="bd-notify-list"></div></section>';document.body.append(modal);modal.querySelector('.bd-notify-close').onclick=close;modal.addEventListener('click',e=>{if(e.target===modal)close()})}
+function close(){if(modal)modal.hidden=true}
+function render(){ensureModal();const list=modal.querySelector('.bd-notify-list');if(!user){list.innerHTML='<div class="bd-notify-empty">Vui lòng đăng nhập tài khoản để xem lịch sử thông báo.</div>';return}if(!items.length){list.innerHTML='<div class="bd-notify-empty">Chưa có thông báo nào.</div>';return}list.innerHTML=items.map(x=>'<article class="bd-notify-item '+(x.is_read?'':'unread')+'"><div class="bd-notify-item-top"><b>'+esc(x.title)+'</b><time>'+new Date(x.created_at).toLocaleString('vi-VN')+'</time></div><p>'+esc(x.body)+'</p><small>'+(x.source==='staff'?'Nhân viên CSKH':x.source==='bot'?'Support AI':'BDShopVN')+'</small></article>').join('')}
+async function load(){if(loading)return;loading=true;try{const {data:{user:u}}=await db.auth.getUser();user=u;if(!u){items=[];count();return}const {data,error}=await db.from('user_notifications').select('id,title,body,source,is_read,created_at').eq('user_id',u.id).order('created_at',{ascending:false}).limit(100);if(error)throw error;items=data||[];count()}catch(e){console.warn('BDShop notifications:',e.message||e)}finally{loading=false}}
+async function add(detail){const title=String(detail.title||'Tin nhắn mới').slice(0,120),body=String(detail.body||'Bạn có tin nhắn mới từ BDShopVN.').slice(0,2000),source=['staff','bot','system'].includes(detail.source)?detail.source:'bot';toast(title,body);try{const {data:{user:u}}=await db.auth.getUser();if(!u)return;const {data,error}=await db.from('user_notifications').insert({user_id:u.id,title,body,source}).select('id,title,body,source,is_read,created_at').single();if(error)throw error;items.unshift(data);items=items.slice(0,100);count();if(!modal||modal.hidden)return;render()}catch(e){console.warn('Không lưu được thông báo:',e.message||e)}}
+window.addEventListener('bdshop:notification',e=>{if(e.detail)add(e.detail)});
+btn.addEventListener('click',async()=>{ensureModal();modal.hidden=false;await load();render();if(user){const ids=items.filter(x=>!x.is_read).map(x=>x.id);if(ids.length){const {error}=await db.from('user_notifications').update({is_read:true}).eq('user_id',user.id).in('id',ids);if(!error){items=items.map(x=>({...x,is_read:true}));count();render()}}}});
+db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_IN'||event==='SIGNED_OUT')setTimeout(load,0)});
+load();setInterval(load,30000);
+})();
