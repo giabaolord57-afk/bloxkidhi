@@ -49,7 +49,7 @@ const fmtTime=ts=>{const d=ts?new Date(ts):new Date();if(isNaN(d))return '';cons
 const aiHist=[];let aiBusy=false,aiOffUntil=0;
 const redact=t=>String(t).replace(/[\w.+-]+@[\w-]+\.[\w.]+/g,'[email]').replace(/\d[\d\s.-]{7,}\d/g,'[số]');
 function aiContext(){
- const lines=[];groups.forEach(g=>{const ps=unique.filter(p=>p.category===g.name);if(!ps.length)return;lines.push('## '+g.name+(g.desc?' — '+g.desc:'')+'\n'+ps.slice(0,40).map(p=>p.name+': '+fmt(priceOf(p))).join('; '))});
+ const lines=['## QUY TẮC TRẢ LỜI: Khi khách hỏi so sánh hai hay nhiều trái/sản phẩm, hãy trả lời đúng trọng tâm bằng ưu điểm, nhược điểm và trường hợp nên chọn; không tự chuyển câu hỏi thành báo giá một sản phẩm. Chỉ nêu giá khi khách hỏi giá rõ ràng. Nếu thiếu dữ liệu để kết luận, hãy nói rõ.'];groups.forEach(g=>{const ps=unique.filter(p=>p.category===g.name);if(!ps.length)return;lines.push('## '+g.name+(g.desc?' — '+g.desc:'')+'\n'+ps.slice(0,40).map(p=>p.name+': '+fmt(priceOf(p))).join('; '))});
  if(window.BOOST&&window.BOOST.desc)lines.push('## Lưu ý cày thuê: '+window.BOOST.desc);
  lines.push('## Cách mua: '+answers.buy,'## Thanh toán: chuyển khoản (VietQR, có thể gửi bill) hoặc thẻ cào; làm theo biểu mẫu ở bước thanh toán.','## Bảo hành: chưa có chính sách chung; điều kiện riêng do Admin xác nhận.','## LIÊN HỆ: Zalo '+(contact.zalo||'chưa cập nhật')+'; Facebook '+(contact.facebook||'chưa cập nhật'));
  const faqTxt=faqList.map(f=>'Hỏi: '+f.title+'\nĐáp: '+faqFill(f.a)).join('\n\n').slice(0,7000);
@@ -103,7 +103,7 @@ function faqMatch(n){
  if(unique.some(p=>{const pn=norm(p.name);return pn.length>=7&&n.includes(pn)}))return null;
  return best}
 const FALLBACK='Mình chưa xác định chính xác sản phẩm hoặc vấn đề bạn muốn hỏi. Bạn có thể nhắn tên sản phẩm, “liệt kê giá Robux”, “cày thuê có gì”, “cách mua”, “thanh toán” hoặc “lịch sử đơn hàng”. Mình sẽ trả lời chi tiết ngay trong chat; thông tin chưa có trong dữ liệu shop mình sẽ nói rõ.';
-function reply(question){const q=norm(question);if(!q)return 'Bạn nhập câu hỏi giúp mình nhé.';if(/cam on|thank|thanks/.test(q))return 'Rất vui được hỗ trợ bạn! 😊';
+function reply(question){const q=norm(question);if(!q)return 'Bạn nhập câu hỏi giúp mình nhé.';if(/cam on|thank|thanks/.test(q))return 'Rất vui được hỗ trợ bạn! 😊';if(/\b(so sanh|giua)\b/.test(q)||/\b(ngon hon|tot hon|manh hon|hieu qua hon|nen chon|uu tien hon)\b/.test(q))return FALLBACK;
 if(/^(hi|hello|alo|chao|xin chao|shop oi|ad oi)$/.test(q))return answers.hello;
 const faq=faqMatch(q);if(faq)return faqFill(faq.a);
 if(/lien he|zalo|facebook|admin|nhan vien|tu van truc tiep/.test(q))return answers.contact;
@@ -145,18 +145,18 @@ function listen(){if(!db||!chat||channel)return;try{channel=db.channel('support-
 function stopListen(){if(channel&&db){try{db.removeChannel(channel)}catch(_){}}channel=null;if(poller)clearInterval(poller);poller=null}
 async function loadHistory(){if(historyLoaded||!chat)return;historyLoaded=true;try{let qy=db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',chat.id);if(chat.session_no!=null)qy=qy.eq('session_no',chat.session_no);const {data}=await qy.order('id',{ascending:false}).limit(50);sentInSession=(data||[]).some(m=>m.sender==='user'&&(m.image_path||m.body!==STAFF_TEXT));renderMode();for(const m of (data||[]).reverse()){lastId=Math.max(lastId,m.id);append(m.sender==='admin'?'staff':'user',m.body,m.image_path?await signed(m.image_path):null,m.created_at)}if((data||[]).length)append('bot',mode==='admin'?'— Đây là lịch sử trò chuyện với CSKH. Nhân viên sẽ trả lời ngay tại đây. —':'— Lịch sử trò chuyện với CSKH ở trên. Bạn đang dùng trợ lý AI; bấm “Gặp CSKH” để nhắn nhân viên. —')}catch(_){}}
 async function initSupport(){renderMode();const u=await getUser();if(!u){stopListen();chat=null;mode='ai';historyLoaded=false;lastId=0;renderMode();return}
- try{const {data}=await db.from('support_chats').select('*').eq('user_id',u.id).maybeSingle();if(data){chat=data;mode=data.mode==='admin'?'admin':'ai';setBadge(data.unread_user||0);if(started)loadHistory();listen()}}catch(_){}renderMode()}
+ try{const {data}=await db.from('support_chats').select('*').eq('user_id',u.id).maybeSingle();if(data){chat=data;mode='ai';setBadge(data.unread_user||0);historyLoaded=false;stopListen()}}catch(_){}renderMode()}
 function failStaff(){append('bot','Chưa kết nối được kênh CSKH trực tuyến (Admin cần chạy SETUP-CHAT-CSKH.sql trong Supabase). Bạn có thể liên hệ trực tiếp:\n'+answers.contact)}
 async function requestStaff(){if(busyStaff)return;busyStaff=true;staffBtn.disabled=true;
- try{append('user',STAFF_TEXT);const u=await getUser();
-  if(!u){append('bot','Để chat với nhân viên CSKH, bạn cần đăng nhập để Admin nhận diện đúng tài khoản và đơn hàng của bạn.\nĐăng nhập tại: '+new URL('tai-khoan.html',location.href).href+'\nHoặc liên hệ nhanh:\n'+answers.contact);return}
+ try{const u=await getUser();
+  if(!u){append('user',STAFF_TEXT);append('bot','Để chat với nhân viên CSKH, bạn cần đăng nhập để Admin nhận diện đúng tài khoản và đơn hàng của bạn.\nĐăng nhập tại: '+new URL('tai-khoan.html',location.href).href+'\nHoặc liên hệ nhanh:\n'+answers.contact);return}
   const {data,error}=await db.rpc('support_open_chat',{p_username:userName(u)});if(error||!data){failStaff();return}
-  const first=!chat;chat=Array.isArray(data)?data[0]:data;mode='admin';
+  chat=Array.isArray(data)?data[0]:data;mode='admin';historyLoaded=false;lastId=0;body.textContent='';renderMode();await loadHistory();append('user',STAFF_TEXT);
   const {data:mid,error:e2}=await db.rpc('support_send_message',{p_body:STAFF_TEXT});if(e2){mode='ai';renderMode();failStaff();return}
   if(typeof mid==='number')lastId=Math.max(lastId,mid);historyLoaded=true;listen();renderMode();
   append('bot','Đã gửi yêu cầu tới nhân viên CSKH. Bạn cứ nhắn nội dung cần hỗ trợ ngay trong khung chat này, Admin sẽ trả lời trực tiếp tại đây. Muốn hỏi trợ lý tự động, bấm “🤖 Hỏi AI”.')
  }finally{busyStaff=false;staffBtn.disabled=false;renderMode()}}
-async function backToAI(){mode='ai';renderMode();if(db&&chat){try{await db.rpc('support_set_mode',{p_mode:'ai'})}catch(_){}}append('bot','Đã chuyển sang Hỏi AI. Từ giờ trợ lý tự động sẽ trả lời bạn thay cho nhân viên. Cần gặp nhân viên, bấm “☏ Gặp CSKH” nhé.')}
+async function backToAI(){mode='ai';stopListen();renderMode();if(db&&chat){try{await db.rpc('support_set_mode',{p_mode:'ai'})}catch(_){}}append('bot','Đã chuyển sang Hỏi AI. Từ giờ trợ lý tự động sẽ trả lời bạn thay cho nhân viên. Cần gặp nhân viên, bấm “☏ Gặp CSKH” nhé.')}
 staffBtn.addEventListener('click',()=>mode==='admin'?backToAI():requestStaff());
 async function sendStaff(q){if(!q&&!pendingImg)return;const img=pendingImg;let path=null;
  if(img){try{path=chat.id+'/'+(crypto.randomUUID?crypto.randomUUID():Date.now()+''+Math.random().toString(16).slice(2))+'.jpg';const {error:ue}=await db.storage.from('support-images').upload(path,img.blob,{contentType:'image/jpeg'});if(ue)throw ue}catch(e){append('bot','Chưa tải được ảnh lên: '+((e&&e.message)||'lỗi')+'. Admin cần chạy SETUP-CHAT-CSKH-V2.sql trong Supabase.');return}}
@@ -220,7 +220,7 @@ okBtn.addEventListener('click',async()=>{if(!stars)return;okBtn.disabled=true;ok
  append('bot',answers.hello+' Cần gặp nhân viên, bấm “☏ Gặp CSKH” nhé.')});
 quick.append(staffBtn,resolveBtn);
 const prompts=['Shop bán gì?','Cách mua hàng','Bảng giá Robux','Cày thuê có gì?','Gamepass có gì?','Thanh toán','Lịch sử đơn hàng','Liên hệ admin'];prompts.forEach(t=>{const b=document.createElement('button');b.className='cw-chip';b.textContent=t;b.addEventListener('click',()=>{if(mode==='admin')backToAI().then(()=>send(t));else send(t)});quick.append(b)});
-function open(){panel.classList.add('open');fab.classList.add('hidden');if(!started){started=true;append('bot',answers.hello+' Bạn có thể chọn câu hỏi nhanh bên dưới, hoặc bấm “☏ Gặp CSKH” để chat với nhân viên.');loadHistory()}setBadge(0);if(chat)markRead();input.focus()}
+function open(){panel.classList.add('open');fab.classList.add('hidden');if(!started){started=true;append('bot',answers.hello+' Bạn có thể chọn câu hỏi nhanh bên dưới, hoặc bấm “☏ Gặp CSKH” để chat với nhân viên.')}setBadge(0);if(chat)markRead();input.focus()}
 fab.addEventListener('click',open);$('chatClose').addEventListener('click',()=>{panel.classList.remove('open');fab.classList.remove('hidden')});sendBtn.addEventListener('click',()=>send(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value)}});
 renderMode();initSupport();if(db)db.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_IN'||ev==='SIGNED_OUT')setTimeout(initSupport,0)});
 })();
