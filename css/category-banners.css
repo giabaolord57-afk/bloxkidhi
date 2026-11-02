@@ -1,0 +1,42 @@
+/* Approved category artwork. Existing markup, routes and scripts are unchanged. */
+#app .cat[href="#/robux"] { --category-banner: url('../img/categories/robux-120h.webp'); }
+#app .cat[href="#/vat-pham"] { --category-banner: url('../img/categories/vat-pham-blox-fruits.webp'); }
+#app .cat[href="#/cay-thue"] { --category-banner: url('../img/categories/cay-thue-blox-fruits.webp'); }
+#app .cat[href="#/steal-an-egg"] { --category-banner: url('../img/categories/steal-an-egg.webp'); }
+#app .cat[href="#/acc"] { --category-banner: url('../img/categories/acc-roblox-tu-chon.webp'); }
+#app .cat[href="#/tui-mu"] { --category-banner: url('../img/categories/acc-tui-mu-blox.webp'); }
+
+/* Turn only the six product-category icon areas into full-width artwork.
+   The original headings, descriptions and entire clickable cards remain intact. */
+#app .cat:is(
+  [href="#/robux"],
+  [href="#/vat-pham"],
+  [href="#/cay-thue"],
+  [href="#/steal-an-egg"],
+  [href="#/acc"],
+  [href="#/tui-mu"]
+) > .ico {
+  display: block;
+  flex: 0 0 auto;
+  width: calc(100% + 44px);
+  aspect-ratio: 16 / 9;
+  margin: -22px -22px 8px;
+  background: #080b14 var(--category-banner) center / contain no-repeat;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  filter: none;
+  transform: none;
+  transition: none;
+}
+
+#app .cat:is(
+  [href="#/robux"],
+  [href="#/vat-pham"],
+  [href="#/cay-thue"],
+  [href="#/steal-an-egg"],
+  [href="#/acc"],
+  [href="#/tui-mu"]
+) > .ico > img {
+  display: none;
+}
