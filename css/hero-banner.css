@@ -1,0 +1,78 @@
+/* Home banner only. Original scripts, text, links and page layout are retained. */
+.hero {
+  background: #080b14;
+}
+
+/* Use the existing decorative floor element for the banner artwork. */
+.hero .hero-floor {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #080b14 url('../img/hero-dragon.webp') center / cover no-repeat;
+  opacity: 1;
+  transform: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  animation: none;
+}
+
+.hero::before {
+  background: none;
+  animation: none;
+}
+
+/* Keep text readable without blurring the dragon and character. */
+.hero .hero-in {
+  background: linear-gradient(90deg, #080b14f5 0%, #080b14dc 37%, #080b1470 57%, #080b1400 78%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Retain the original shop logo as a small badge over the artwork. */
+.hero .hero-logo {
+  position: absolute;
+  right: 26px;
+  bottom: 24px;
+  width: 170px;
+  max-width: 28%;
+  height: auto;
+  animation: none;
+}
+
+/* Stack the artwork above the existing copy on tablets and phones. */
+@media (max-width: 980px) {
+  .hero .hero-floor {
+    background-size: auto 520px;
+    background-position: right top;
+  }
+
+  .hero .hero-in {
+    padding-top: 330px;
+    background: linear-gradient(180deg, #080b1400 160px, #080b14b3 290px, #080b14 370px);
+  }
+
+  .hero .hero-logo {
+    top: 24px;
+    right: 24px;
+    bottom: auto;
+    width: 160px;
+    max-width: 38%;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero .hero-floor {
+    background-size: auto 390px;
+  }
+
+  .hero .hero-in {
+    padding-top: 265px;
+    background: linear-gradient(180deg, #080b1400 125px, #080b14b3 235px, #080b14 305px);
+  }
+
+  .hero .hero-logo {
+    top: 18px;
+    right: 18px;
+    width: 135px;
+  }
+}
