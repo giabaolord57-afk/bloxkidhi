@@ -117,8 +117,6 @@
       <a class="card hv cat" href="#/steal-an-egg"><span class="ico"><img class="ico-img" src="img/steal-an-egg.png" alt="" width="36" height="40" decoding="async"></span><h3>Steal An Egg</h3><p>Cày thuê Steal An Egg theo ngày (25k/ngày), auto sự kiện, chạy bộ, cướp trứng, upgrade...</p><span class="go">Xem dịch vụ →</span></a>
       <a class="card hv cat" href="#/acc"><span class="ico">🎮</span><h3>Acc Roblox tự chọn</h3><p>Lọc theo game (Blox Fruits, Steal An Egg…), sắp xếp theo giá, xem thông số. Gửi mã acc cho admin rồi thanh toán để nhận mật khẩu.</p><span class="go">Chọn acc →</span></a>
       <a class="card hv cat" href="#/tui-mu"><span class="ico">🎒</span><h3>Acc túi mù Blox</h3><p>50.000đ / acc. 100% có Soul Guitar, CDK, Godhuman.</p><span class="go">Xem acc túi mù Blox →</span></a>
-      <a class="card hv cat" href="#/don-hang"><span class="ico">📦</span><h3>Đơn hàng của tôi</h3><p>Theo dõi trạng thái các đơn bạn đã đặt trên thiết bị này.</p><span class="go">Xem đơn →</span></a>
-      <a class="card hv cat" href="${esc(S.contact.zalo)}" target="_blank" rel="noopener"><span class="ico">💬</span><h3>Hỗ trợ Zalo</h3><p>Cần tư vấn, đặt đơn lớn hay hỏi bảo hành? Nhắn ngay.</p><span class="go">Nhắn Zalo →</span></a>
     </div>
 
     <div class="sec-h"><div><h2>Bán chạy</h2></div></div>

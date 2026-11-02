@@ -2048,15 +2048,15 @@ td.n, th.n {
 
 
 /* ---------- TICKER DANH MỤC: bấm được + hiệu ứng động ---------- */
-.ticker::before {                      /* tia sáng chạy dọc viền trên */
+.ticker::before {                      /* dải màu liền mạch phủ toàn bộ viền trên */
   content: "";
-  position: absolute; top: 0; left: 0; height: 2px; width: 28%;
-  background: linear-gradient(90deg, transparent, var(--ac), var(--pu), transparent);
+  position: absolute; top: 0; left: 0; height: 2px; width: 100%;
+  background: linear-gradient(90deg, var(--ac), var(--pu), var(--ac)) 0 50% / 200% 100% repeat-x;
   filter: drop-shadow(0 0 6px var(--glow));
   animation: tkSweep 3.2s linear infinite;
   pointer-events: none; z-index: 2;
 }
-@keyframes tkSweep { from { transform: translateX(-100%); } to { transform: translateX(360%); } }
+@keyframes tkSweep { from { background-position: 0 50%; } to { background-position: 200% 50%; } }
 
 a.tk {
   text-decoration: none;
