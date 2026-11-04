@@ -55,6 +55,7 @@ function aiContext(){
  const faqTxt=faqList.map(f=>'Hỏi: '+f.title+'\nĐáp: '+faqFill(f.a)).join('\n\n').slice(0,7000);
  return lines.join('\n').slice(0,6800)+'\n\n=== FAQ CỦA SHOP ===\n'+faqTxt}
 async function askAI(q){
+ const revision=supportRevision;
  const dbx=window.BX_SUPABASE;
  if(!window.SHOP.aiChat)return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
  if(!dbx)return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
@@ -64,6 +65,7 @@ async function askAI(q){
   ctl=new AbortController();t=setTimeout(()=>ctl.abort(),55000);
   const {data,error}=await dbx.functions.invoke('ai-chat',{body:{message:redact(q),context:aiContext(),history:aiHist.slice(-6)},signal:ctl.signal});
   clearTimeout(t);
+  if(revision!==supportRevision)return null;
   if(error||!data||typeof data.reply!=='string'){
    aiOffUntil=Date.now()+60000;
    const code=data&&data.error;
@@ -73,7 +75,7 @@ async function askAI(q){
   aiHist.push({role:'user',text:redact(q)},{role:'model',text:data.reply});if(aiHist.length>12)aiHist.splice(0,2);
   return {reply:data.reply};
  }catch(_){
-  if(t)clearTimeout(t);aiOffUntil=Date.now()+60000;
+  if(t)clearTimeout(t);if(revision!==supportRevision)return null;aiOffUntil=Date.now()+60000;
   return {error:'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.'};
  }
 }
@@ -128,6 +130,7 @@ return FALLBACK;
 // ===== CSKH: chat trực tiếp với Admin (Supabase) — nút "Gặp CSKH" <-> "Hỏi AI" =====
 const STAFF_TEXT='Tôi cần gặp nhân viên hỗ trợ';
 const db=window.BX_SUPABASE,statusEl=panel.querySelector('.cw-status'),badge=fab.querySelector('.chat-fab-badge'),sendBtn=$('cwSend');
+let supportUserId=null,supportRevision=0,supportInitId=0;
 let sentInSession=false,pendingImg=null,mode='ai',chat=null,lastId=0,channel=null,poller=null,historyLoaded=false,busyStaff=false,unread=0,sending=false;const renderedMessageIds=new Set();
 const staffBtn=document.createElement('button');staffBtn.className='cw-chip cw-chip-staff';staffBtn.type='button';
 const presenceEl=document.createElement('div');presenceEl.className='cw-presence';presenceEl.setAttribute('aria-live','polite');presenceEl.style.cssText='font-size:11px;margin-top:3px;font-weight:600;color:#16a34a';presenceEl.textContent='● Đang kiểm tra trạng thái CSKH...';if(statusEl&&statusEl.parentNode)statusEl.parentNode.append(presenceEl);
@@ -142,46 +145,150 @@ const isOpen=()=>panel.classList.contains('open');
 function setBadge(n){unread=n;if(!badge)return;badge.style.display=n>0?'block':'none'}
 async function getUser(){if(!db)return null;try{const {data:{session}}=await db.auth.getSession();return session?session.user:null}catch(_){return null}}
 const signed=async path=>{try{const {data}=await db.storage.from('support-images').createSignedUrl(path,3600);return data&&data.signedUrl||null}catch(_){return null}};
-const userName=u=>String((u&&u.email)||'').split('@')[0]||'khach';
+const userName=u=>String(u?.user_metadata?.username||String(u?.email||'').split('@')[0]||'khach');
+function resetSupport(userId){
+ supportRevision++;
+ supportUserId=userId;
+ stopListen();
+ chat=null;mode='ai';historyLoaded=false;lastId=0;sentInSession=false;
+ busyStaff=false;sending=false;aiBusy=false;
+ staffBtn.disabled=false;sendBtn.disabled=false;
+ renderedMessageIds.clear();aiHist.length=0;
+ body.textContent='';input.value='';started=false;last=null;
+ clearImg();modal.hidden=true;txt.value='';
+ setBadge(0);renderMode();
+}
 async function markRead(){if(!db||!chat)return;try{await db.rpc('support_mark_read_user')}catch(_){}}
 // Chỉ vẽ tin của nhân viên; tin của khách đã được vẽ ngay lúc gửi (tránh trùng).
-async function pull(){if(!db||!chat)return;try{const {data,error}=await db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',chat.id).gt('id',lastId).order('id',{ascending:true}).limit(50);if(error||!data||!data.length)return;let fresh=0;for(const m of data){lastId=Math.max(lastId,m.id);if(m.sender==='admin'){append('staff',m.body,m.image_path?await signed(m.image_path):null,m.created_at,m.id);notifyAccount('Nhân viên CSKH đã phản hồi',m.body,'staff');fresh++}}if(fresh){if(isOpen())markRead();else setBadge(unread+fresh)}}catch(_){}}
+async function pull(){
+ if(!db||!chat)return;
+ const currentChat=chat,revision=supportRevision;
+ try{
+  const {data,error}=await db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',currentChat.id).gt('id',lastId).order('id',{ascending:true}).limit(50);
+  if(revision!==supportRevision||chat!==currentChat||error||!data?.length)return;
+  let fresh=0;
+  for(const m of data){
+   const imageUrl=m.sender==='admin'&&m.image_path?await signed(m.image_path):null;
+   if(revision!==supportRevision||chat!==currentChat)return;
+   lastId=Math.max(lastId,m.id);
+   if(m.sender==='admin'){
+    append('staff',m.body,imageUrl,m.created_at,m.id);
+    notifyAccount('Nhân viên CSKH đã phản hồi',m.body,'staff');fresh++;
+   }
+  }
+  if(fresh){if(isOpen())markRead();else setBadge(unread+fresh)}
+ }catch(_){}
+}
 function listen(){if(!db||!chat)return;if(poller)clearInterval(poller);if(channel&&db){try{db.removeChannel(channel)}catch(_){}}channel=null;
  try{const ch=db.channel('support-'+chat.id).on('postgres_changes',{event:'INSERT',schema:'public',table:'support_messages',filter:'chat_id=eq.'+chat.id},()=>{pull()}).subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){if(channel===ch)channel=null;}});channel=ch}catch(_){channel=null}
  // Polling dự phòng nhanh: vẫn nhận tin nếu Realtime lỗi hoặc trình duyệt bỏ lỡ sự kiện.
  poller=setInterval(()=>{if(!document.hidden)pull()},2500)}
 function stopListen(){if(channel&&db){try{db.removeChannel(channel)}catch(_){}}channel=null;if(poller)clearInterval(poller);poller=null}
-async function loadHistory(){if(historyLoaded||!chat)return;historyLoaded=true;try{let qy=db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',chat.id);if(chat.session_no!=null)qy=qy.eq('session_no',chat.session_no);const {data}=await qy.order('id',{ascending:false}).limit(50);sentInSession=(data||[]).some(m=>m.sender==='user'&&(m.image_path||m.body!==STAFF_TEXT));renderMode();for(const m of (data||[]).reverse()){lastId=Math.max(lastId,m.id);append(m.sender==='admin'?'staff':'user',m.body,m.image_path?await signed(m.image_path):null,m.created_at,m.id)}}catch(_){}}
-async function initSupport(){renderMode();const u=await getUser();if(!u){stopListen();chat=null;mode='ai';historyLoaded=false;lastId=0;renderedMessageIds.clear();setBadge(0);renderMode();return}
- try{const {data}=await db.from('support_chats').select('*').eq('user_id',u.id).maybeSingle();if(data){chat=data;mode=data.mode==='admin'?'admin':'ai';setBadge(data.unread_user||0);historyLoaded=false;stopListen();lastId=0;try{const {data:last}=await db.from('support_messages').select('id').eq('chat_id',chat.id).order('id',{ascending:false}).limit(1).maybeSingle();if(last&&last.id!=null)lastId=Number(last.id)||0}catch(_){}await loadHistory();listen()}}catch(_){}renderMode()}
+async function loadHistory(){
+ if(historyLoaded||!chat)return;
+ const currentChat=chat,revision=supportRevision;
+ historyLoaded=true;
+ try{
+  let qy=db.from('support_messages').select('id,sender,body,image_path,created_at').eq('chat_id',currentChat.id);
+  if(currentChat.session_no!=null)qy=qy.eq('session_no',currentChat.session_no);
+  const {data,error}=await qy.order('id',{ascending:false}).limit(50);
+  if(revision!==supportRevision||chat!==currentChat)return;
+  if(error){historyLoaded=false;return}
+  sentInSession=(data||[]).some(m=>m.sender==='user'&&(m.image_path||m.body!==STAFF_TEXT));
+  renderMode();
+  for(const m of (data||[]).reverse()){
+   const imageUrl=m.image_path?await signed(m.image_path):null;
+   if(revision!==supportRevision||chat!==currentChat)return;
+   lastId=Math.max(lastId,m.id);
+   append(m.sender==='admin'?'staff':'user',m.body,imageUrl,m.created_at,m.id);
+  }
+ }catch(_){if(revision===supportRevision&&chat===currentChat)historyLoaded=false}
+}
+async function initSupport(){
+ if(busyStaff)return;
+ const initId=++supportInitId;
+ let revision=supportRevision;
+ const u=await getUser();
+ if(revision!==supportRevision||initId!==supportInitId)return;
+ const userId=u?.id||null;
+ if(userId!==supportUserId){resetSupport(userId);revision=supportRevision}
+ if(!u)return;
+ try{
+  const {data,error}=await db.from('support_chats').select('*').eq('user_id',u.id).maybeSingle();
+  if(revision!==supportRevision||initId!==supportInitId||error)return;
+  stopListen();chat=data||null;lastId=0;historyLoaded=false;
+  mode=data?.mode==='admin'?'admin':'ai';setBadge(data?.unread_user||0);
+  if(chat){await loadHistory();if(revision!==supportRevision||initId!==supportInitId)return;listen()}
+ }catch(_){}
+ if(revision===supportRevision&&initId===supportInitId)renderMode();
+}
 function failStaff(){append('bot','Chưa kết nối được kênh CSKH trực tuyến (Admin cần chạy SETUP-CHAT-CSKH.sql trong Supabase). Bạn có thể liên hệ trực tiếp:\n'+answers.contact)}
-async function requestStaff(){if(busyStaff)return;busyStaff=true;staffBtn.disabled=true;
- try{const u=await getUser();
+async function requestStaff(){
+ if(busyStaff)return;
+ supportInitId++;
+ busyStaff=true;staffBtn.disabled=true;
+ let revision=supportRevision;
+ try{
+  const u=await getUser();
+  if(revision!==supportRevision)return;
   if(!u){append('user',STAFF_TEXT);append('bot','Để chat với nhân viên CSKH, bạn cần đăng nhập để Admin nhận diện đúng tài khoản và đơn hàng của bạn.\nĐăng nhập tại: '+new URL('tai-khoan.html',location.href).href+'\nHoặc liên hệ nhanh:\n'+answers.contact);return}
-  const {data,error}=await db.rpc('support_open_chat',{p_username:userName(u)});if(error||!data){failStaff();return}
-  chat=Array.isArray(data)?data[0]:data;mode='admin';historyLoaded=false;lastId=0;renderedMessageIds.clear();body.textContent='';renderMode();await loadHistory();append('user',STAFF_TEXT);
-  const {data:mid,error:e2}=await db.rpc('support_send_message',{p_body:STAFF_TEXT});if(e2){mode='ai';renderMode();failStaff();return}
-  if(typeof mid==='number')lastId=Math.max(lastId,mid);historyLoaded=true;listen();renderMode();
-  append('bot','Đã gửi yêu cầu tới nhân viên CSKH. Bạn cứ nhắn nội dung cần hỗ trợ ngay trong khung chat này, Admin sẽ trả lời trực tiếp tại đây. Muốn hỏi trợ lý tự động, bấm “🤖 Hỏi AI”.')
- }finally{busyStaff=false;staffBtn.disabled=false;renderMode()}}
-async function backToAI(){mode='ai';stopListen();renderMode();if(db&&chat){try{await db.rpc('support_set_mode',{p_mode:'ai'})}catch(_){}}append('bot','Đã chuyển sang Hỏi AI. Từ giờ trợ lý tự động sẽ trả lời bạn thay cho nhân viên. Cần gặp nhân viên, bấm “☏ Gặp CSKH” nhé.')}
+  if(u.id!==supportUserId){resetSupport(u.id);revision=supportRevision;busyStaff=true;staffBtn.disabled=true}
+  const {data,error}=await db.rpc('support_open_chat',{p_username:userName(u)});
+  if(revision!==supportRevision)return;
+  if(error||!data){failStaff();return}
+  const openedChat=Array.isArray(data)?data[0]:data;
+  if(openedChat.user_id!==u.id){await initSupport();return}
+  chat=openedChat;mode='admin';historyLoaded=false;lastId=0;
+  renderedMessageIds.clear();body.textContent='';renderMode();await loadHistory();
+  if(revision!==supportRevision)return;
+  append('user',STAFF_TEXT);
+  const {data:mid,error:e2}=await db.rpc('support_send_message',{p_body:STAFF_TEXT});
+  if(revision!==supportRevision)return;
+  if(e2){mode='ai';renderMode();failStaff();return}
+  if(typeof mid==='number')lastId=Math.max(lastId,mid);
+  historyLoaded=true;listen();renderMode();
+  append('bot','Đã gửi yêu cầu tới nhân viên CSKH. Bạn cứ nhắn nội dung cần hỗ trợ ngay trong khung chat này, Admin sẽ trả lời trực tiếp tại đây. Muốn hỏi trợ lý tự động, bấm “🤖 Hỏi AI”.');
+ }finally{
+  if(revision===supportRevision){busyStaff=false;staffBtn.disabled=false;renderMode()}
+ }
+}
+async function backToAI(){const revision=supportRevision;mode='ai';stopListen();renderMode();if(db&&chat){try{await db.rpc('support_set_mode',{p_mode:'ai'})}catch(_){}}if(revision!==supportRevision)return;append('bot','Đã chuyển sang Hỏi AI. Từ giờ trợ lý tự động sẽ trả lời bạn thay cho nhân viên. Cần gặp nhân viên, bấm “☏ Gặp CSKH” nhé.')}
 staffBtn.addEventListener('click',()=>mode==='admin'?backToAI():requestStaff());
-async function sendStaff(q){if(!q&&!pendingImg)return;const img=pendingImg;let path=null;
- if(img){try{path=chat.id+'/'+(crypto.randomUUID?crypto.randomUUID():Date.now()+''+Math.random().toString(16).slice(2))+'.jpg';const {error:ue}=await db.storage.from('support-images').upload(path,img.blob,{contentType:'image/jpeg'});if(ue)throw ue}catch(e){append('bot','Chưa tải được ảnh lên: '+((e&&e.message)||'lỗi')+'. Admin cần chạy SETUP-CHAT-CSKH-V2.sql trong Supabase.');return}}
+async function sendStaff(q){
+ if(!chat||(!q&&!pendingImg))return;
+ const currentChat=chat,revision=supportRevision,img=pendingImg;
+ const u=await getUser();
+ if(revision!==supportRevision)return;
+ if(u?.id!==currentChat.user_id){await initSupport();return}
+ let path=null;
+ if(img){
+  try{
+   path=currentChat.id+'/'+(crypto.randomUUID?crypto.randomUUID():Date.now()+''+Math.random().toString(16).slice(2))+'.jpg';
+   const {error:ue}=await db.storage.from('support-images').upload(path,img.blob,{contentType:'image/jpeg'});
+   if(ue)throw ue;
+  }catch(e){
+   if(revision===supportRevision)append('bot','Chưa tải được ảnh lên: '+((e&&e.message)||'lỗi')+'. Admin cần chạy SETUP-CHAT-CSKH-V2.sql trong Supabase.');
+   return;
+  }
+ }
+ if(revision!==supportRevision)return;
  const {data,error}=await db.rpc('support_send_message',{p_body:q,p_image_path:path});
+ if(revision!==supportRevision)return;
  if(error){append('bot','Chưa gửi được tin nhắn tới nhân viên: '+(error.message||'lỗi kết nối')+'. Vui lòng thử lại hoặc bấm “🤖 Hỏi AI”.');return}
- append('user',q,img?img.url:null);sentInSession=true;renderMode();input.value='';clearImg();if(typeof data==='number')lastId=Math.max(lastId,data)}
-async function send(q){q=String(q||'').trim().slice(0,mode==='admin'?1000:500);if(!q&&!(mode==='admin'&&pendingImg))return;
- if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{sending=false;sendBtn.disabled=false}return}
+ append('user',q,img?img.url:null);sentInSession=true;renderMode();input.value='';clearImg();
+ if(typeof data==='number')lastId=Math.max(lastId,data);
+}
+async function send(q){const revision=supportRevision;q=String(q||'').trim().slice(0,mode==='admin'?1000:500);if(!q&&!(mode==='admin'&&pendingImg))return;
+ if(mode==='admin'){if(sending)return;sending=true;sendBtn.disabled=true;try{await sendStaff(q)}finally{if(revision===supportRevision){sending=false;sendBtn.disabled=false}}return}
  append('user',q);input.value='';const n=norm(q);
  if(/cach tat 2fa|tat 2fa|2 step verification|two step verification/.test(n)){const answer='**Hướng dẫn tắt 2FA trên Roblox**\\n\\n1. Chỉ làm nếu trên form bạn chọn "Đã tắt 2FA":\\n2. Roblox → Settings → Security\\n3. Tắt 2-Step Verification\\n4. Bấm Log Out of All Other Sessions\\n5. Quay lại đặt hàng. Nhận Robux xong nên bật lại 2FA.\\n\\n⚠️ Lưu ý: Tắt 2FA làm tài khoản kém an toàn hơn. Chỉ thực hiện khi bạn hiểu rõ rủi ro và bật lại ngay sau khi hoàn tất.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot');return}
  // Chỉ chức năng tra cứu lịch sử đơn được xử lý riêng; mọi câu hỏi/tin nhắn khác đều do Support AI trả lời.
- if(/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)){const answer=await orderReply(q);append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot');return}
+ if(/don hang|kiem tra don|trang thai don|bao gio don|khi nao xong don|hoan thanh du kien|du kien don|lich su don|don cua toi|don nao|cac don|nhung don/.test(n)){const answer=await orderReply(q);if(revision!==supportRevision)return;append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot');return}
  if(aiBusy){append('bot','Support AI đang xử lý câu hỏi trước. Vui lòng đợi một chút rồi gửi lại nhé.');return}
  aiBusy=true;sendBtn.disabled=true;append('bot','Support AI đang soạn câu trả lời…');const wait=body.lastElementChild;
- try{const ai=await askAI(q);const answer=(ai&&ai.reply)||'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot')}
- catch(_){const answer='Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot')}
- finally{aiBusy=false;sendBtn.disabled=false;if(wait&&wait.parentNode)wait.remove()}
+ try{const ai=await askAI(q);if(revision!==supportRevision)return;const answer=(ai&&ai.reply)||'Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot')}
+ catch(_){if(revision!==supportRevision)return;const answer='Support AI đang bị lỗi, vui lòng thử lại hoặc gọi CSKH.';append('bot',answer);notifyAccount('Support AI đã phản hồi',answer,'bot')}
+ finally{if(revision===supportRevision){aiBusy=false;sendBtn.disabled=false}if(wait&&wait.parentNode)wait.remove()}
 }
 
 // ===== Emoji, ảnh, "Đã giải quyết" + đánh giá sao =====
@@ -219,8 +326,9 @@ resolveBtn.addEventListener('click',()=>{if(!chat){append('bot','Nút này dùng
 modal.querySelector('.cw-modal-cancel').addEventListener('click',closeModal);
 modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal()});
-okBtn.addEventListener('click',async()=>{if(!stars)return;okBtn.disabled=true;okBtn.textContent='Đang gửi...';errEl.textContent='';const c=txt.value.trim();
+okBtn.addEventListener('click',async()=>{if(!stars)return;okBtn.disabled=true;okBtn.textContent='Đang gửi...';errEl.textContent='';const c=txt.value.trim(),revision=supportRevision;
  const {data:newNo,error}=await db.rpc('support_resolve',{p_rating:stars,p_comment:c});
+ if(revision!==supportRevision)return;
  if(error){errEl.textContent='Chưa gửi được: '+(error.message||'lỗi')+(/support_resolve|schema cache|does not exist/i.test(error.message||'')?' (Admin cần chạy SETUP-CHAT-CSKH-V2.sql)':'');okBtn.disabled=false;okBtn.textContent='Gửi đánh giá';return}
  closeModal();
  // Kết thúc phiên cũ: xoá khung chat, mở phiên mới (tin nhắn cũ vẫn lưu cho Admin xem).
@@ -232,5 +340,12 @@ quick.append(staffBtn,resolveBtn);
 const prompts=['Shop bán gì?','Cách mua hàng','Bảng giá Robux','Cày thuê có gì?','Gamepass có gì?','Thanh toán','Cách tắt 2FA','Lịch sử đơn hàng','Liên hệ admin'];prompts.forEach(t=>{const b=document.createElement('button');b.className='cw-chip';b.textContent=t;b.addEventListener('click',()=>{if(mode==='admin')backToAI().then(()=>send(t));else send(t)});quick.append(b)});
 function open(){panel.classList.add('open');fab.classList.add('hidden');if(!started){started=true;append('bot',answers.hello+' Bạn có thể chọn câu hỏi nhanh bên dưới, hoặc bấm “☏ Gặp CSKH” để chat với nhân viên.')}setBadge(0);if(chat){pull();markRead()}input.focus()}
 fab.addEventListener('click',open);$('chatClose').addEventListener('click',()=>{panel.classList.remove('open');fab.classList.remove('hidden')});sendBtn.addEventListener('click',()=>send(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input.value)}});
-renderMode();startPresence();initSupport();if(db)db.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_IN'||ev==='SIGNED_OUT')setTimeout(initSupport,0)});
+renderMode();startPresence();initSupport();
+if(db)db.auth.onAuthStateChange((ev,session)=>{
+ const userId=session?.user?.id||null;
+ if(userId!==supportUserId){
+  resetSupport(userId);
+  setTimeout(initSupport,0);
+ }
+});
 })();
