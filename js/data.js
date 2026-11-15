@@ -26,10 +26,10 @@ window.SHOP = {
 
   // Thanh toán chuyển khoản — điền thông tin thật để hiện mã QR VietQR
   bank: {
-    bankCode: "TPB",        // vd: "MB", "VCB", "TCB"
-    accountNo: "82417112005",       // số tài khoản
-    accountName: "DOAN NGOC NHU QUYNH",     // tên chủ tài khoản
-   qrImage: "img/qr-chuyen-khoan.png",
+    bankCode: "ICB",        // vd: "MB", "VCB", "TCB"
+    accountNo: "100884432441",       // số tài khoản
+    accountName: "DANG THI ANH TUYET",     // tên chủ tài khoản
+   qrImage: "img/qr-vietinbank-dang-thi-anh-tuyet.png",
   },
 };
 

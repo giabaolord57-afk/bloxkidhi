@@ -2197,3 +2197,6 @@ a.tk:active { transform: translateY(0) scale(.94); }
 .bd-notify-item p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;color:#e5edf8;line-height:1.5}
 .bd-notify-empty{padding:32px 12px;text-align:center;color:#aab7ca}
 @media(max-width:520px){.nav-actions{gap:7px}.notification-btn,.cart-btn{width:40px;height:40px}.bd-notify-overlay{padding:5vh 8px 10px}.bd-notify-panel{max-height:90vh}}
+
+/* QR VietinBank do shop cung cap: phóng to khung mã để dễ quét, không làm méo ảnh. */
+.qr { max-width: 420px; padding: 0; aspect-ratio: 0.85; object-fit: cover; object-position: center 40%; }
