@@ -255,7 +255,7 @@
     if (!c.length) return `<div class="empty"><div class="big">🛒</div><h2>Giỏ hàng trống</h2><p>Hãy chọn vài sản phẩm nhé.</p><p style="margin-top:16px"><a class="btn btn-p" href="#/vat-pham">Mua sắm ngay</a></p></div>`;
     const total = c.reduce((a, l) => a + l.unit * l.qty, 0);
     const cartBank = S.bank, cartHasBank = cartBank.bankCode && cartBank.accountNo;
-    const cartQr = cartHasBank ? cartBank.qrImage : '';
+    const cartQr = cartHasBank ? `https://img.vietqr.io/image/${encodeURIComponent(cartBank.bankCode)}-${encodeURIComponent(cartBank.accountNo)}-compact2.png?amount=${total}&addInfo=${encodeURIComponent('BDShopVN thanh toan')}${cartBank.accountName ? '&accountName='+encodeURIComponent(cartBank.accountName) : ''}` : '';
     const needUser = c.some((l) => l.type === "item" || l.type === "boost");
     // Cần đăng nhập để shop thực hiện giao dịch thay khách: cày thuê, trái vĩnh viễn, trái rương và gamepass.
     const passwordGroups = ["trai-vinh-vien", "trai-ruong", "gamepass"];
@@ -284,7 +284,7 @@
           </div>
         </div>
         <section id="bankPayFields" class="pay-extra"><h4>🏦 Chuyển khoản ngân hàng</h4>
-          ${cartHasBank ? `<div style="text-align:center"><img class="qr" src="${cartQr}" alt="Mã QR VietinBank - DANG THI ANH TUYET"><p class="muted small">QR VietinBank cố định. Vui lòng tự nhập đúng số tiền và nội dung chuyển khoản là mã đơn hàng sau khi đặt hàng.</p></div><div class="pay" style="margin-top:12px"><div class="r"><span>Ngân hàng</span><b>${esc(cartBank.bankCode)}</b></div><div class="r"><span>Số tài khoản</span><b>${esc(cartBank.accountNo)}</b></div>${cartBank.accountName?`<div class="r"><span>Chủ tài khoản</span><b>${esc(cartBank.accountName)}</b></div>`:''}<div class="r"><span>Số tiền tạm tính</span><b>${vnd(total)}</b></div></div>` : `<p class="muted small">Shop chưa cấu hình ngân hàng. Admin cần điền bankCode, accountNo và accountName trong js/data.js để hiện QR và số tài khoản.</p>`}
+          ${cartHasBank ? `<div style="text-align:center"><img class="qr" src="${cartQr}" alt="Mã QR VietinBank - DANG THI ANH TUYET"><p class="muted small">QR tạm tính theo tổng giỏ hàng. Sau khi tạo đơn, quét QR trên trang thanh toán để tự điền đúng số tiền và mã đơn hàng.</p></div><div class="pay" style="margin-top:12px"><div class="r"><span>Ngân hàng</span><b>${esc(cartBank.bankCode)}</b></div><div class="r"><span>Số tài khoản</span><b>${esc(cartBank.accountNo)}</b></div>${cartBank.accountName?`<div class="r"><span>Chủ tài khoản</span><b>${esc(cartBank.accountName)}</b></div>`:''}<div class="r"><span>Số tiền tạm tính</span><b>${vnd(total)}</b></div></div>` : `<p class="muted small">Shop chưa cấu hình ngân hàng. Admin cần điền bankCode, accountNo và accountName trong js/data.js để hiện QR và số tài khoản.</p>`}
           <p class="muted small">Sau khi tạo đơn, chuyển đúng số tiền với nội dung là mã đơn. Bạn có thể tải ảnh/PDF biên lai ở mục gửi bill bên dưới.</p></section>
         <section id="cardPayFields" class="pay-extra" hidden>
           <h4>🎟️ Thanh toán bằng thẻ cào</h4>
@@ -474,7 +474,7 @@ views["gio-hang"].after = () => {
     const o = getOrders().find((x) => x.code === p[0]);
     if (!o) return `<div class="empty"><div class="big">🤔</div><h2>Không tìm thấy đơn</h2><p><a href="#/don-hang">Xem đơn hàng</a></p></div>`;
     const b = S.bank, hasBank = b.bankCode && b.accountNo;
-    const qr = hasBank ? b.qrImage : '';
+    const qr = hasBank ? `https://img.vietqr.io/image/${encodeURIComponent(b.bankCode)}-${encodeURIComponent(b.accountNo)}-compact2.png?amount=${o.total}&addInfo=${encodeURIComponent(o.code)}${b.accountName ? "&accountName=" + encodeURIComponent(b.accountName) : ""}` : "";
     return `
     <div class="ph"><div class="note ok" style="margin-bottom:16px">✅ Đã tạo đơn <b>${esc(o.code)}</b>. Phương thức đã chọn: <b>${o.paymentMethod==='card'?'Thẻ cào':'Chuyển khoản'}</b>. Admin sẽ kiểm tra thông tin thanh toán trước khi xử lý đơn.</div><h1>Thanh toán</h1></div>
     <div class="layout">
@@ -485,7 +485,7 @@ views["gio-hang"].after = () => {
         <div class="row" style="margin-top:14px"><button class="btn btn-p" id="sendZalo">💬 Sao chép đơn & mở Zalo</button><a class="btn btn-g" href="${esc(S.contact.facebook)}" target="_blank" rel="noopener">Facebook admin</a></div>
       </div>
       <div class="card"><h3 style="margin-bottom:12px">${o.paymentMethod==='card'?'🎟️ Thẻ cào':'🏦 Chuyển khoản'}</h3>
-        ${o.paymentMethod==='card' ? `<div class="note">Thông tin thẻ đã được gửi cho admin để kiểm tra. Trạng thái thanh toán hiện tại: <b>${esc(o.paymentStatus||'Chờ kiểm tra')}</b>. Không gửi lại mã thẻ công khai qua Zalo.</div>` : (hasBank ? `<img class="qr" src="${qr}" alt="Mã QR VietinBank - DANG THI ANH TUYET"><p class="muted small" style="text-align:center;margin:10px 0">QR cố định: nhập đúng số tiền và nội dung là mã đơn bên dưới.</p><div class="pay" style="margin-top:14px">
+        ${o.paymentMethod==='card' ? `<div class="note">Thông tin thẻ đã được gửi cho admin để kiểm tra. Trạng thái thanh toán hiện tại: <b>${esc(o.paymentStatus||'Chờ kiểm tra')}</b>. Không gửi lại mã thẻ công khai qua Zalo.</div>` : (hasBank ? `<img class="qr" src="${qr}" alt="Mã QR VietinBank - DANG THI ANH TUYET"><div class="pay" style="margin-top:14px">
           <div class="r"><span>Ngân hàng</span><b>${esc(b.bankCode)}</b></div>
           <div class="r"><span>Số tài khoản</span><b>${esc(b.accountNo)}</b></div>
           ${b.accountName ? `<div class="r"><span>Chủ TK</span><b>${esc(b.accountName)}</b></div>` : ""}
@@ -630,7 +630,7 @@ views["gio-hang"].after = () => {
     const { x, bag } = f, price = accPrice(x), category=AS.categories.find(c=>c.id===x.category_id), kind = category?.name || (bag ? "acc túi mù" : "acc");
     if (x.sold) return `<div class="empty"><div class="big">😢</div><h2>Acc này đã bán</h2><p><a href="${bag ? "#/tui-mu" : "#/acc"}">Chọn acc khác</a></p></div>`;
     const b = S.bank || {}, hasBank = b.bankCode && b.accountNo;
-    const qr = hasBank ? b.qrImage : '';
+    const qr = hasBank ? `https://img.vietqr.io/image/${encodeURIComponent(b.bankCode)}-${encodeURIComponent(b.accountNo)}-compact2.png?amount=${price}&addInfo=${encodeURIComponent(x.code)}${b.accountName ? "&accountName=" + encodeURIComponent(b.accountName) : ""}` : "";
     const msg = `Mình muốn mua ${kind} mã ${x.code} (tên acc: ${x.name}) - giá ${vnd(price)}.`;
     return `
     <div class="ph"><div class="crumb"><a href="#/">Trang chủ</a> / <a href="${bag ? "#/tui-mu" : "#/acc"}">${esc(category?.name || (bag ? "Acc túi mù Blox" : "Acc Roblox tự chọn"))}</a> / ${esc(x.code)}</div><h1>Mua ${kind}</h1></div>
@@ -650,7 +650,7 @@ views["gio-hang"].after = () => {
         </div>
       </div>
       <div class="card"><h3 style="margin-bottom:12px">Thanh toán</h3>
-        ${hasBank ? `<img class="qr" src="${qr}" alt="Mã QR VietinBank - DANG THI ANH TUYET"><p class="muted small" style="text-align:center;margin:10px 0">QR cố định: nhập đúng số tiền và nội dung mã acc bên dưới.</p><div class="pay" style="margin-top:14px">
+        ${hasBank ? `<img class="qr" src="${qr}" alt="Mã QR VietinBank - DANG THI ANH TUYET"><div class="pay" style="margin-top:14px">
           <div class="r"><span>Ngân hàng</span><b>${esc(b.bankCode)}</b></div><div class="r"><span>Số tài khoản</span><b>${esc(b.accountNo)}</b></div>
           ${b.accountName ? `<div class="r"><span>Chủ TK</span><b>${esc(b.accountName)}</b></div>` : ""}
           <div class="r"><span>Số tiền</span><b>${vnd(price)}</b></div><div class="r"><span>Nội dung</span><b>${esc(x.code)}</b></div></div>`
